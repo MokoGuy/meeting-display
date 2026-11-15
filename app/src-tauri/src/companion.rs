@@ -31,6 +31,9 @@ pub const MANIFEST: &str = "/ext/user_assets/meeting-display/appmeta/manifest.js
 /// refuses to publish unless the package holds exactly this app's version.
 const PACKAGE: &[u8] = include_bytes!("../assets/bar-app.tgz");
 const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
+/// A refused install is tried again this many times, this far apart.
+const INSTALL_RETRIES: usize = 3;
+const INSTALL_RETRY_EVERY: Duration = Duration::from_secs(4);
 const ALIVE: &str = "/ext/apps_data/js_apps/meeting-display/alive.txt";
 
 /// The companion rewrites its heartbeat every 20 s: silent for longer than
@@ -122,9 +125,20 @@ pub fn bar_app_behind(on_bar: Option<&str>) -> bool {
 /// Puts the on-bar app this app carries on the bar, then starts it. Only ever called because
 /// the user asked for an update: the install stops whatever the bar shows for a few seconds.
 pub async fn install_bar_app(client: &BusyBarClient) -> Result<(), String> {
-    let installed = client.install_app(PACKAGE).await;
-    tracing::info!(companion = "install", to = PACKAGE_VERSION, ok = installed.is_ok());
-    installed.map_err(|error| format!("Installation sur la barre impossible : {error}"))?;
+    // The bar refuses a package while it is busy starting or stopping an app, which is
+    // exactly what goes on around an update: try a few times before giving up.
+    let mut outcome = client.install_app(PACKAGE).await;
+    for _ in 0..INSTALL_RETRIES {
+        let Err(error) = &outcome else { break };
+        tracing::info!(companion = "install", to = PACKAGE_VERSION, ok = false, %error);
+        tokio::time::sleep(INSTALL_RETRY_EVERY).await;
+        outcome = client.install_app(PACKAGE).await;
+    }
+    match &outcome {
+        Ok(()) => tracing::info!(companion = "install", to = PACKAGE_VERSION, ok = true),
+        Err(error) => tracing::info!(companion = "install", to = PACKAGE_VERSION, ok = false, %error),
+    }
+    outcome.map_err(|error| format!("Installation sur la barre impossible : {error}"))?;
     let launched = client.launch_app(APP_ID).await.is_ok();
     tracing::info!(companion = "launch", launched);
     Ok(())
@@ -468,6 +482,14 @@ pub async fn sync(app: &tauri::AppHandle) -> bool {
 pub async fn launch(app: tauri::AppHandle) {
     tokio::time::sleep(Duration::from_secs(3)).await;
     let state = app.state::<AppState>();
+    // An update is about to replace the on-bar app: starting the old one now would only get
+    // in the way of the install, which launches the new one itself.
+    if state
+        .bar_install_allowed
+        .load(std::sync::atomic::Ordering::SeqCst)
+    {
+        return;
+    }
     if let Ok(client) = BusyBarClient::new(&state.base_url()) {
         let launched = client.launch_app(APP_ID).await.is_ok();
         tracing::info!(companion = "launch", launched);
