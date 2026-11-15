@@ -25,6 +25,7 @@ import {
   Button,
   Disclosure,
   IconButton,
+  IconPill,
   MeetingRow,
   NowRow,
   StatusDot,
@@ -287,7 +288,7 @@ function App() {
                     <Button primary onClick={() => void act(line.onPrimary)}>
                       {line.primary}
                     </Button>
-                    {line.canSkip && <Button onClick={() => void act(skipMeeting)}>Ignorer</Button>}
+                    {line.canSkip && <IconPill icon="skip" label="Ignorer" onClick={() => void act(skipMeeting)} />}
                   </NowRow>
                 )}
                 {group.rows.filter((meeting) => !isBeforeCurrent(meeting, group.key)).map(row)}

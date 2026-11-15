@@ -6,7 +6,7 @@ import "./tokens.css";
 import "./components.css";
 
 // ---------- icons
-type IconName = "settings" | "back" | "chevron" | "eye" | "resume" | "auto" | "light" | "dark";
+type IconName = "settings" | "back" | "chevron" | "eye" | "resume" | "skip" | "auto" | "light" | "dark";
 const ICON_PATHS: Record<IconName, ReactNode> = {
   settings: (
     <>
@@ -16,6 +16,12 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
   ),
   back: <path d="M19 12H5M11 6l-6 6 6 6" />,
   chevron: <path d="M9 6l6 6-6 6" />,
+  skip: (
+    <>
+      <path d="M4 5v14l12 -7z" />
+      <path d="M20 5v14" />
+    </>
+  ),
   resume: (
     <>
       <path d="M9 14l-4 -4l4 -4" />
@@ -56,6 +62,15 @@ export function Button({ primary, onClick, children }: { primary?: boolean; onCl
   return (
     <button type="button" className={`md-button${primary ? " is-primary" : ""}`} onClick={onClick}>
       {children}
+    </button>
+  );
+}
+
+/** A round secondary button that carries an icon only, for the action next to the primary one. */
+export function IconPill({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
+  return (
+    <button type="button" className="md-button is-icon" aria-label={label} data-tip={label} onClick={onClick}>
+      <Icon name={icon} />
     </button>
   );
 }

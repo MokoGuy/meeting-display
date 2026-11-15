@@ -36,7 +36,7 @@ L'écran arrière de la barre affiche l'état, le sujet complet et un détail.
 Un clic sur l'icône ouvre le panneau : la date du jour, la réunion du moment en première ligne,
 puis le reste de la journée et les jours suivants.
 
-Sur la réunion du moment : **Démarrer** la valide (à l'heure, ou en avance), **Ignorer** l'écarte,
+Sur la réunion du moment : **Démarrer** la valide (à l'heure, ou en avance), l'icône **Ignorer** l'écarte,
 **Terminer** la clôt. Une réunion terminée (« réalisée ») ou ignorée reste à son heure dans la liste,
 grisée ; au survol de sa ligne, une icône **Reprendre** la remet en jeu, elle seule.
 Clic droit sur l'icône puis **Démarrer la réunion** valide aussi. Le bouton physique de la barre

@@ -36,6 +36,9 @@
 .md-button:hover { background: var(--quiet-hover); }
 .md-button.is-primary { background: var(--accent-fill); color: var(--on-accent); font-weight: 600; }
 .md-button.is-primary:hover { background: var(--accent-fill-hover); }
+.md-button.is-icon { width: var(--control-height); padding: 0; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-muted); }
+.md-button.is-icon:hover { color: var(--ink); }
+.md-button.is-icon .md-icon { width: 16px; height: 16px; }
 .md-button:focus-visible, .md-icon-button:focus-visible, .md-switch:focus-visible,
 .md-time-segment:focus-visible, .md-disclosure-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -131,7 +134,9 @@
   opacity: 0; transition: opacity 0.15s ease-out, background 0.15s ease-out;
 }
 .md-row-action .md-icon { width: 15px; height: 15px; }
-.md-row:hover .md-row-action, .md-row-action:focus-visible { opacity: 1; }
+.md-row:hover .md-row-action, .md-row-action:focus-visible, .md-row.is-hovered .md-row-action { opacity: 1; }
+.md-row.is-hovered .md-row-action { background: var(--quiet); color: var(--ink); }
+.md-row.is-hovered .md-row-action::after { opacity: 1; }
 .md-row-action:hover { background: var(--quiet); color: var(--ink); }
 .md-row-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
