@@ -5,6 +5,7 @@ import {
   HistoryEntryDto,
   MeetingDto,
   MeetingStatusDto,
+  VersionsDto,
   endMeeting,
   getAutoStart,
   getConnection,
@@ -12,6 +13,7 @@ import {
   getMeetingStatus,
   getMeetings,
   getSettings,
+  getVersions,
   onConnectionChanged,
   onMeetingsChanged,
   resumeMeeting,
@@ -36,6 +38,7 @@ import {
   TextField,
   ThemeButton,
   TimeField,
+  VersionInfo,
   type RowState,
   type Theme,
 } from "./ui/components";
@@ -127,6 +130,7 @@ function App() {
   const [discreet, setDiscreet] = useState(false);
   const [autoLive, setAutoLive] = useState(false);
   const [autoStart, setAutoStartState] = useState(false);
+  const [versions, setVersions] = useState<VersionsDto | null>(null);
   const [theme, setTheme] = useState<Theme>(() => {
     try {
       const saved = window.localStorage.getItem("theme");
@@ -404,6 +408,8 @@ function App() {
               onClick={() => {
                 setMessage("");
                 setView("settings");
+                // Asked each time the settings open: the bar may have been updated meanwhile.
+                getVersions().then(setVersions, () => setVersions(null));
               }}
             />
           </footer>
@@ -431,7 +437,16 @@ function App() {
             </Disclosure>
           </div>
           <footer className="md-footer">
-            <StatusDot>{message}</StatusDot>
+            {/* The footer's left side says what just happened; with nothing to say, what is installed. */}
+            {message || !versions ? (
+              <StatusDot>{message}</StatusDot>
+            ) : (
+              <VersionInfo
+                app={versions.app}
+                update={versions.update}
+                barApp={versions.bar_reachable ? versions.bar_app : undefined}
+              />
+            )}
             <Button primary onClick={() => void save()}>
               Enregistrer
             </Button>

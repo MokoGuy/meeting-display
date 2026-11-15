@@ -364,6 +364,47 @@ pub async fn resume_meeting(app: AppHandle, id: String) -> Result<(), String> {
     Ok(())
 }
 
+/// What is installed, for the version line at the bottom of the settings.
+#[derive(serde::Serialize)]
+pub struct VersionsDto {
+    /// This app.
+    app: String,
+    /// What the last update check found ("à jour", "0.5.5 en attente"), if one has run.
+    update: Option<String>,
+    /// The on-bar companion app: its version, or `None` when it is not installed.
+    bar_app: Option<String>,
+    /// Whether the bar answered at all; `bar_app` means nothing otherwise.
+    bar_reachable: bool,
+}
+
+#[tauri::command]
+pub async fn get_versions(app: AppHandle) -> Result<VersionsDto, String> {
+    let state = app.state::<AppState>();
+    let update = state
+        .update_note
+        .lock()
+        .expect("update note poisoned")
+        .clone();
+    // The bar keeps each installed app's manifest; reading it works whether the app runs or not.
+    let manifest = match BusyBarClient::new(&state.base_url()) {
+        Ok(client) => client.storage_read(crate::companion::MANIFEST).await.ok(),
+        Err(_) => None,
+    };
+    let bar_app = manifest.clone().flatten().and_then(|text| {
+        serde_json::from_str::<serde_json::Value>(&text)
+            .ok()?
+            .get("version")?
+            .as_str()
+            .map(str::to_string)
+    });
+    Ok(VersionsDto {
+        app: app.package_info().version.to_string(),
+        update,
+        bar_app,
+        bar_reachable: manifest.is_some(),
+    })
+}
+
 /// The local history: meetings held or skipped over the last 30 days.
 #[tauri::command]
 pub fn get_history(app: AppHandle) -> Vec<crate::history::Entry> {

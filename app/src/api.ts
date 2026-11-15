@@ -91,6 +91,18 @@ export const endMeeting = () => invoke<void>("end_meeting");
 /** Puts one meeting skipped or ended by hand back in play. */
 export const resumeMeeting = (id: string) => invoke<void>("resume_meeting", { id });
 
+/** What is installed: this app, and the companion app on the bar. */
+export interface VersionsDto {
+  app: string;
+  /** What the last update check found, if one has run: "à jour", "0.5.5 en attente". */
+  update: string | null;
+  /** Version of the on-bar app, or null when it is not installed. */
+  bar_app: string | null;
+  /** False when the bar did not answer: bar_app then means nothing. */
+  bar_reachable: boolean;
+}
+export const getVersions = () => invoke<VersionsDto>("get_versions");
+
 /** One meeting held or skipped, as kept in the local 30-day history. */
 export interface HistoryEntryDto {
   id: string;

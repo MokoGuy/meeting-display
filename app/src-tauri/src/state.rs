@@ -31,6 +31,8 @@ pub struct AppState {
     pub history: Mutex<crate::history::History>,
     /// What the scheduler last drew on the bar, and when (None = nothing of ours on screen).
     pub last_screen: Mutex<Option<crate::scheduler::Drawn>>,
+    /// What the last update check found, in the panel's words; `None` until one has run.
+    pub update_note: Mutex<Option<String>>,
     /// Whether our assets (icon and sounds) have been stored on the bar since the last failure.
     pub icon_uploaded: AtomicBool,
 }
@@ -78,6 +80,7 @@ impl AppState {
             companion: Mutex::new(crate::companion::Link::default()),
             history: Mutex::new(crate::history::History::default()),
             last_screen: Mutex::new(None),
+            update_note: Mutex::new(None),
             icon_uploaded: AtomicBool::new(false),
         }
     }

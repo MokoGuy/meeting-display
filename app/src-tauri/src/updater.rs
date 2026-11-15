@@ -35,6 +35,14 @@ enum Outcome {
     Done,
 }
 
+/// Keeps the outcome of a check for the panel's version line.
+fn note(app: &AppHandle, text: Option<String>) {
+    *app.state::<AppState>()
+        .update_note
+        .lock()
+        .expect("update note poisoned") = text;
+}
+
 fn meeting_in_progress(app: &AppHandle) -> bool {
     !matches!(
         *app.state::<AppState>()
@@ -57,13 +65,16 @@ async fn check_and_install(app: &AppHandle) -> Outcome {
         Ok(Some(update)) => update,
         Ok(None) => {
             tracing::info!(update = "up to date");
+            note(app, Some("à jour".to_string()));
             return Outcome::Done;
         }
         Err(error) => {
             tracing::info!(update = "check failed", %error);
+            note(app, None);
             return Outcome::Done;
         }
     };
+    note(app, Some(format!("{} en attente", update.version)));
     if meeting_in_progress(app) {
         tracing::info!(update = "postponed", version = %update.version);
         return Outcome::Busy;

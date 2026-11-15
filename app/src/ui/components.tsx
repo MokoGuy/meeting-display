@@ -253,6 +253,22 @@ export function Disclosure({ label, children }: { label: string; children: React
   );
 }
 
+/** The installed versions, two quiet lines closing the settings. */
+export function VersionInfo({ app, update, barApp }: { app: string; update?: string | null; barApp?: string | null }) {
+  return (
+    <p className="md-version">
+      Meeting Display {app}
+      {update ? ` · ${update}` : ""}
+      {barApp !== undefined && (
+        <>
+          <br />
+          App de la barre {barApp ?? "non installée"}
+        </>
+      )}
+    </p>
+  );
+}
+
 // ---------- agenda
 export function StatusDot({ online, children }: { online?: boolean; children: ReactNode }) {
   return (

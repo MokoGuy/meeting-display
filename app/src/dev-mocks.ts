@@ -56,6 +56,8 @@ export function installMocks() {
         return { phase: current ? phase : "none", meeting: current ?? null, dismissed: phase === "upcoming" ? { d1: "done", d2: "skipped" } : {} };
       case "get_meetings":
         return current ? [...earlier, current, ...later] : [];
+      case "get_versions":
+        return { app: "0.5.4", update: "à jour", bar_app: "0.5.4", bar_reachable: true };
       case "get_history": {
         if (!current) return [];
         const entry = (id: string, subject: string, startIn: number, planned: number, actual: number | null) => ({

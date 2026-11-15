@@ -25,6 +25,8 @@ use tauri::Manager;
 pub const APP_ID: &str = "meeting-display";
 const AGENDA: &str = "/ext/apps_data/js_apps/meeting-display/agenda.json";
 const ACTIONS: &str = "/ext/apps_data/js_apps/meeting-display/actions.txt";
+/// The manifest the bar keeps for the installed companion app, with its version.
+pub const MANIFEST: &str = "/ext/user_assets/meeting-display/appmeta/manifest.json";
 const ALIVE: &str = "/ext/apps_data/js_apps/meeting-display/alive.txt";
 
 /// The companion rewrites its heartbeat every 20 s: silent for longer than

@@ -124,8 +124,9 @@ function countdown(timestamp: number, direction: string, color: string, x: numbe
     timeout: TIMEOUT_S,
   };
 }
-function back(label: string, subject: string, detail: string): El[] {
-  const line = (id: string, value: string, font: string, y: number): El => ({
+/** The back screen's three lines. At rest, the top right corner also gives this app's version. */
+function back(label: string, subject: string, detail: string, atRest = false): El[] {
+  const line = (id: string, value: string, font: string, y: number, width = 136): El => ({
     id,
     type: "text",
     display: "back",
@@ -133,12 +134,16 @@ function back(label: string, subject: string, detail: string): El[] {
     font,
     x: 4,
     y,
-    width: 136,
+    width,
     color: WHITE,
     ...SCROLL,
     timeout: TIMEOUT_S,
   });
-  return [line("back-title", label, "small", 8), line("back-subject", subject, "normal", 35), line("back-detail", detail, "small", 67)];
+  const lines = [line("back-title", label, "small", 8, atRest ? 104 : 136), line("back-subject", subject, "normal", 35), line("back-detail", detail, "small", 67)];
+  if (atRest) {
+    lines.push({ id: "back-version", type: "text", display: "back", text: `v${manifest.version}`, font: "small", x: 140, y: 8, align: "top_right", color: WHITE, timeout: TIMEOUT_S });
+  }
+  return lines;
 }
 
 /** "2h05", "12 min": time left before a start, rounded up to the minute. */
@@ -215,7 +220,7 @@ function meetingScreen(cur: Cur): { elements: El[]; led?: string } {
     label = "DEPASSEMENT";
     detail = "START pour terminer";
   }
-  elements.push(...back(label, cur.t, detail));
+  elements.push(...back(label, cur.t, detail, kind === "idle"));
   return { elements, led: cur.tent ? undefined : led };
 }
 
@@ -260,7 +265,7 @@ function emptyScreen(): { elements: El[] } {
     elements: [
       rect("bg", 0, 0, 72, 16, ["#000000FF"]),
       text("title", "Agenda libre", "small", 36, 4, DIM, { align: "top_mid" }),
-      ...back("MEETING DISPLAY", "Agenda libre", "aucune reunion a venir"),
+      ...back("MEETING DISPLAY", "Agenda libre", "aucune reunion a venir", true),
     ],
   };
 }

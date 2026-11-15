@@ -100,7 +100,8 @@ pub fn run() {
             commands::skip_meeting,
             commands::end_meeting,
             commands::resume_meeting,
-            commands::get_history
+            commands::get_history,
+            commands::get_versions
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

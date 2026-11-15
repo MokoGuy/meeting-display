@@ -78,6 +78,11 @@ reprennent une réunion directement sur la barre. Voir [`bar-app/README.md`](../
 | Adresse de la barre | `http://10.0.4.20` en USB |
 | Lancer au démarrage de Windows | démarre l'app avec la session |
 
+**Quelle version est installée ?** En bas des réglages, à gauche du bouton Enregistrer : la version
+de l'app Windows (avec « à jour » ou la version en attente, une fois la première vérification
+faite), puis celle de l'app embarquée sur la barre. Sur la barre, l'écran arrière affiche la version
+de l'app embarquée en haut à droite quand aucune réunion n'approche.
+
 Les sons sont joués à un volume de 50 quand la barre est réglée plus bas, puis le volume
 d'origine est rétabli.
 
