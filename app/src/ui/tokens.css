@@ -1,5 +1,7 @@
 /* Generated from the Meeting Display design system (tokens.json). Do not edit by hand:
-   change the tokens in the design system, then regenerate. */
+   change the tokens in the design system, then regenerate.
+   Theme: light by default; dark when Windows asks for it, unless the root element
+   carries data-theme="light"; data-theme="dark" forces dark. */
 :root {
   --ground: #fafafb;
   --raised: #ffffff;
@@ -36,7 +38,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --ground: #1b1c1f;
     --raised: #26272b;
     --ink: #f3f3f4;
@@ -56,4 +58,25 @@
     --offline: #8f9098;
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --ground: #1b1c1f;
+  --raised: #26272b;
+  --ink: #f3f3f4;
+  --ink-muted: #b9bac1;
+  --ink-subtle: #8f9098;
+  --hairline: rgba(255, 255, 255, 0.10);
+  --field-border: rgba(255, 255, 255, 0.45);
+  --quiet: rgba(255, 255, 255, 0.10);
+  --quiet-hover: rgba(255, 255, 255, 0.17);
+  --bar: rgba(255, 255, 255, 0.45);
+  --accent: #f26322;
+  --accent-fill: #ff8a50;
+  --accent-fill-hover: #ffa070;
+  --on-accent: #1b1c1f;
+  --live: #2fd07a;
+  --date: #ff6961;
+  --offline: #8f9098;
+  color-scheme: dark;
 }

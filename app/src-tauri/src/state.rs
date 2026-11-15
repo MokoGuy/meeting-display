@@ -1,7 +1,7 @@
 use crate::busybar::Status;
 use crate::calendar::Meeting;
 use crate::meeting_state::MeetingState;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
@@ -25,7 +25,7 @@ pub struct AppState {
     pub discreet_mode: Mutex<bool>,
     pub auto_start: Mutex<bool>,
     /// Meetings the user skipped or ended by hand: ignored until the app restarts.
-    pub dismissed: Mutex<HashSet<String>>,
+    pub dismissed: Mutex<HashMap<String, &'static str>>,
     /// What the scheduler last drew on the bar, and when (None = nothing of ours on screen).
     pub last_screen: Mutex<Option<crate::scheduler::Drawn>>,
     /// Whether our assets (icon and sounds) have been stored on the bar since the last failure.
@@ -72,7 +72,7 @@ impl AppState {
             quiet_hours_end: Mutex::new(quiet_hours_end),
             discreet_mode: Mutex::new(discreet_mode),
             auto_start: Mutex::new(auto_start),
-            dismissed: Mutex::new(HashSet::new()),
+            dismissed: Mutex::new(HashMap::new()),
             last_screen: Mutex::new(None),
             icon_uploaded: AtomicBool::new(false),
         }
@@ -129,32 +129,34 @@ impl AppState {
         let dismissed = self.dismissed.lock().expect("dismissed state poisoned");
         self.meetings()
             .into_iter()
-            .filter(|meeting| !dismissed.contains(&meeting.id))
+            .filter(|meeting| !dismissed.contains_key(&meeting.id))
             .collect()
     }
 
-    /// Dismissed meetings that have not ended yet: the ones worth bringing back.
-    pub fn dismissed_upcoming(&self, now: chrono::DateTime<chrono::Utc>) -> usize {
-        let dismissed = self.dismissed.lock().expect("dismissed state poisoned");
-        self.meetings()
+    /// Meetings set aside by the user, with how: "done" (started then ended)
+    /// or "skipped" (ignored without being started).
+    pub fn dismissed_map(&self) -> HashMap<String, String> {
+        self.dismissed
+            .lock()
+            .expect("dismissed state poisoned")
             .iter()
-            .filter(|meeting| meeting.end > now && dismissed.contains(&meeting.id))
-            .count()
+            .map(|(id, kind)| (id.clone(), kind.to_string()))
+            .collect()
     }
 
-    /// Forgets every skip or early end: all known meetings are shown again.
-    pub fn restore_dismissed(&self) {
+    /// Puts one meeting back in play.
+    pub fn resume_meeting(&self, meeting_id: &str) {
         self.dismissed
             .lock()
             .expect("dismissed state poisoned")
-            .clear();
+            .remove(meeting_id);
     }
 
-    pub fn dismiss(&self, meeting_id: &str) {
+    pub fn dismiss(&self, meeting_id: &str, kind: &'static str) {
         self.dismissed
             .lock()
             .expect("dismissed state poisoned")
-            .insert(meeting_id.to_string());
+            .insert(meeting_id.to_string(), kind);
     }
 
     pub fn set_meetings(&self, meetings: Vec<Meeting>) {

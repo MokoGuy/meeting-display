@@ -28,6 +28,7 @@ export function installMocks() {
     live: meeting("m1", "Point projet", -12, 30),
     overrun: meeting("m1", "Point projet", -38, 30),
   }[phase];
+  const earlier = [meeting("d1", "Standup équipe", -200, 15), meeting("d2", "Déjeuner d'équipe", -90, 60)];
   const later = [
     meeting("m2", "Standup équipe", 95, 15),
     meeting("m3", "Revue de sprint avec un titre vraiment très long", 180, 60, "tentative"),
@@ -52,9 +53,9 @@ export function installMocks() {
       case "get_settings":
         return settings;
       case "get_meeting_status":
-        return { phase: current ? phase : "none", meeting: current ?? null, dismissed: phase === "upcoming" ? 2 : 0 };
+        return { phase: current ? phase : "none", meeting: current ?? null, dismissed: phase === "upcoming" ? { d1: "done", d2: "skipped" } : {} };
       case "get_meetings":
-        return current ? [current, ...later] : [];
+        return current ? [...earlier, current, ...later] : [];
       case "get_autostart":
         return false;
       case "test_connection":

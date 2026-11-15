@@ -12,7 +12,7 @@ import {
   getSettings,
   onConnectionChanged,
   onMeetingsChanged,
-  restoreMeetings,
+  resumeMeeting,
   saveCalendarSettings,
   saveMeetingSettings,
   saveSettings,
@@ -21,7 +21,20 @@ import {
   startMeetingNow,
   testConnection,
 } from "./api";
-import { Button, Disclosure, IconButton, MeetingRow, NowRow, StatusDot, Switch, TextField, TimeField } from "./ui/components";
+import {
+  Button,
+  Disclosure,
+  IconButton,
+  MeetingRow,
+  NowRow,
+  StatusDot,
+  Switch,
+  TextField,
+  ThemeButton,
+  TimeField,
+  type RowState,
+  type Theme,
+} from "./ui/components";
 import "./App.css";
 
 const initialConnection: ConnectionDto = {
@@ -75,7 +88,7 @@ function nowLine(status: MeetingStatusDto, now: number) {
 function App() {
   const [view, setView] = useState<View>("main");
   const [connection, setConnection] = useState(initialConnection);
-  const [status, setStatus] = useState<MeetingStatusDto>({ phase: "none", meeting: null, dismissed: 0 });
+  const [status, setStatus] = useState<MeetingStatusDto>({ phase: "none", meeting: null, dismissed: {} });
   const [meetings, setMeetings] = useState<MeetingDto[]>([]);
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState("");
@@ -89,6 +102,14 @@ function App() {
   const [discreet, setDiscreet] = useState(false);
   const [autoLive, setAutoLive] = useState(false);
   const [autoStart, setAutoStartState] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      const saved = window.localStorage.getItem("theme");
+      return saved === "light" || saved === "dark" ? saved : "auto";
+    } catch {
+      return "auto";
+    }
+  });
   const viewRef = useRef(view);
   viewRef.current = view;
 
@@ -139,6 +160,17 @@ function App() {
     };
   }, []);
 
+  // The theme is an attribute on the root element; "auto" removes it and Windows decides.
+  useEffect(() => {
+    if (theme === "auto") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem("theme", theme);
+    } catch {
+      // the choice simply is not remembered
+    }
+  }, [theme]);
+
   async function act(action: () => Promise<void>) {
     setMessage("");
     try {
@@ -181,9 +213,16 @@ function App() {
   }
 
   const current = status.meeting;
+  const today = dayKey(now);
+  const rowState = (meeting: MeetingDto): RowState =>
+    status.dismissed[meeting.id] ?? (meeting.show_as === "tentative" ? "tentative" : "upcoming");
+  // Meetings still to come, plus today's set-aside ones, which stay at their time in the list.
   const others = meetings
     .filter((meeting) => meeting.id !== current?.id)
-    .filter((meeting) => new Date(meeting.end).getTime() > now)
+    .filter(
+      (meeting) =>
+        new Date(meeting.end).getTime() > now || (status.dismissed[meeting.id] && dayKey(meeting.start) === today),
+    )
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
   // Day groups in order; the current meeting leads its own day.
   const groups: { key: string; first: string; rows: MeetingDto[] }[] = [];
@@ -193,14 +232,27 @@ function App() {
     if (group) group.rows.push(meeting);
     else groups.push({ key, first: meeting.start, rows: [meeting] });
   }
-  const today = dayKey(now);
   const currentDay = current ? dayKey(current.start) : today;
   if (current && !groups.some((group) => group.key === currentDay)) {
     groups.unshift({ key: currentDay, first: current.start, rows: [] });
   }
   groups.sort((a, b) => new Date(a.first).getTime() - new Date(b.first).getTime());
-  const todayCount = others.filter((meeting) => dayKey(meeting.start) === today).length + (current && currentDay === today ? 1 : 0);
+  const todayCount =
+    others.filter((meeting) => dayKey(meeting.start) === today && !status.dismissed[meeting.id]).length +
+    (current && currentDay === today ? 1 : 0);
   const line = current ? nowLine(status, now) : null;
+  // Rows keep their place in time: the ones that started before the current meeting come above it.
+  const isBeforeCurrent = (meeting: MeetingDto, groupKey: string) =>
+    !!current && groupKey === currentDay && new Date(meeting.start).getTime() < new Date(current.start).getTime();
+  const row = (meeting: MeetingDto) => (
+    <MeetingRow
+      key={meeting.id}
+      time={hhmm(meeting.start)}
+      subject={meeting.subject}
+      state={rowState(meeting)}
+      onResume={() => void act(() => resumeMeeting(meeting.id))}
+    />
+  );
 
   return (
     <main className="app md-panel">
@@ -214,7 +266,7 @@ function App() {
           </header>
 
           <div className="agenda">
-            {groups.length === 0 && status.dismissed === 0 && (
+            {groups.length === 0 && (
               <p className="empty">
                 {icsUrl.trim()
                   ? "Aucune réunion dans les 7 prochains jours."
@@ -224,6 +276,7 @@ function App() {
             {groups.map((group) => (
               <section key={group.key}>
                 {group.key !== today && <div className="md-caps md-group-title">{groupTitle(group.first, now)}</div>}
+                {group.rows.filter((meeting) => isBeforeCurrent(meeting, group.key)).map(row)}
                 {current && line && group.key === currentDay && (
                   <NowRow
                     subject={current.subject}
@@ -237,24 +290,9 @@ function App() {
                     {line.canSkip && <Button onClick={() => void act(skipMeeting)}>Ignorer</Button>}
                   </NowRow>
                 )}
-                {group.rows.map((meeting) => (
-                  <MeetingRow
-                    key={meeting.id}
-                    time={hhmm(meeting.start)}
-                    subject={meeting.subject}
-                    tentative={meeting.show_as === "tentative"}
-                  />
-                ))}
+                {group.rows.filter((meeting) => !isBeforeCurrent(meeting, group.key)).map(row)}
               </section>
             ))}
-            {status.dismissed > 0 && (
-              <div className="restore">
-                <span>
-                  {status.dismissed === 1 ? "1 réunion écartée" : `${status.dismissed} réunions écartées`}
-                </span>
-                <Button onClick={() => void act(restoreMeetings)}>Rétablir</Button>
-              </div>
-            )}
           </div>
 
           <footer className="md-footer">
@@ -265,6 +303,7 @@ function App() {
                 {connection.connected ? "Barre connectée" : "Barre hors ligne"}
               </StatusDot>
             )}
+            <ThemeButton theme={theme} onChange={setTheme} />
             <IconButton
               icon="settings"
               label="Réglages"

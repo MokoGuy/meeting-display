@@ -83,8 +83,8 @@ pub struct MeetingStatusDto {
     /// "none", "upcoming", "armed", "live" or "overrun".
     pub phase: String,
     pub meeting: Option<crate::calendar::Meeting>,
-    /// Meetings the user skipped or ended that have not finished yet.
-    pub dismissed: usize,
+    /// Meetings set aside by the user: id to "done" or "skipped".
+    pub dismissed: std::collections::HashMap<String, String>,
 }
 
 #[tauri::command]
@@ -113,7 +113,7 @@ pub fn get_meeting_status(app: AppHandle) -> MeetingStatusDto {
     MeetingStatusDto {
         phase: phase.to_string(),
         meeting,
-        dismissed: state.dismissed_upcoming(Utc::now()),
+        dismissed: state.dismissed_map(),
     }
 }
 
@@ -308,7 +308,7 @@ pub async fn skip_meeting(app: AppHandle) -> Result<(), String> {
         let mut current = state.meeting_state.lock().expect("meeting state poisoned");
         match &*current {
             MeetingState::Armed { meeting } => {
-                state.dismiss(&meeting.id);
+                state.dismiss(&meeting.id, "skipped");
                 *current = MeetingState::Idle;
             }
             MeetingState::Idle => {
@@ -318,7 +318,7 @@ pub async fn skip_meeting(app: AppHandle) -> Result<(), String> {
                     .filter(|meeting| meeting.start > now)
                     .min_by_key(|meeting| meeting.start);
                 match next {
-                    Some(meeting) => state.dismiss(&meeting.id),
+                    Some(meeting) => state.dismiss(&meeting.id, "skipped"),
                     None => return Err("No meeting to skip".to_string()),
                 }
             }
@@ -338,7 +338,7 @@ pub async fn end_meeting(app: AppHandle) -> Result<(), String> {
         let mut current = state.meeting_state.lock().expect("meeting state poisoned");
         match &*current {
             MeetingState::InMeeting { meeting, .. } | MeetingState::Overrun { meeting, .. } => {
-                state.dismiss(&meeting.id);
+                state.dismiss(&meeting.id, "done");
                 *current = MeetingState::Idle;
             }
             _ => return Err("No meeting in progress".to_string()),
@@ -348,17 +348,17 @@ pub async fn end_meeting(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Brings back every meeting the user skipped or ended by hand.
+/// Puts one meeting the user skipped or ended back in play.
 #[tauri::command]
-pub async fn restore_meetings(app: AppHandle) -> Result<(), String> {
-    app.state::<AppState>().restore_dismissed();
+pub async fn resume_meeting(app: AppHandle, id: String) -> Result<(), String> {
+    app.state::<AppState>().resume_meeting(&id);
     crate::scheduler::tick(&app).await;
     Ok(())
 }
 
 #[tauri::command]
 pub fn get_meetings(app: AppHandle) -> Vec<crate::calendar::Meeting> {
-    app.state::<AppState>().visible_meetings()
+    app.state::<AppState>().meetings()
 }
 
 #[tauri::command]

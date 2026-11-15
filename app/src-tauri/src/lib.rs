@@ -91,7 +91,7 @@ pub fn run() {
             commands::start_meeting_now,
             commands::skip_meeting,
             commands::end_meeting,
-            commands::restore_meetings
+            commands::resume_meeting
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

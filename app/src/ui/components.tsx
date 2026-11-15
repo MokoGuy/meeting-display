@@ -5,17 +5,36 @@ import { useId, useState, type KeyboardEvent, type ReactNode, type WheelEvent } 
 import "./tokens.css";
 import "./components.css";
 
-// ---------- icons (the only three, plus the reveal eye)
-type IconName = "settings" | "back" | "chevron" | "eye";
+// ---------- icons
+type IconName = "settings" | "back" | "chevron" | "eye" | "resume" | "auto" | "light" | "dark";
 const ICON_PATHS: Record<IconName, ReactNode> = {
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
-      <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" />
+      <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" />
     </>
   ),
   back: <path d="M19 12H5M11 6l-6 6 6 6" />,
   chevron: <path d="M9 6l6 6-6 6" />,
+  resume: (
+    <>
+      <path d="M9 14l-4 -4l4 -4" />
+      <path d="M5 10h11a4 4 0 1 1 0 8h-1" />
+    </>
+  ),
+  auto: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 3v18M12 9h8.5M12 15h8.5" />
+    </>
+  ),
+  light: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M3 12h1M12 3v1M20 12h1M12 20v1M5.6 5.6l.7 .7M18.4 5.6l-.7 .7M17.7 17.7l.7 .7M6.3 17.7l-.7 .7" />
+    </>
+  ),
+  dark: <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />,
   eye: (
     <>
       <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" />
@@ -43,7 +62,7 @@ export function Button({ primary, onClick, children }: { primary?: boolean; onCl
 
 export function IconButton({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
   return (
-    <button type="button" className="md-icon-button" aria-label={label} title={label} onClick={onClick}>
+    <button type="button" className="md-icon-button" aria-label={label} data-tip={label} onClick={onClick}>
       <Icon name={icon} />
     </button>
   );
@@ -213,17 +232,54 @@ export function StatusDot({ online, children }: { online?: boolean; children: Re
   );
 }
 
-export function MeetingRow({ time, subject, tentative }: { time: string; subject: string; tentative?: boolean }) {
+export type RowState = "upcoming" | "tentative" | "done" | "skipped";
+const ROW_SUFFIX: Record<RowState, string> = {
+  upcoming: "",
+  tentative: " · provisoire",
+  done: " · réalisée",
+  skipped: " · ignorée",
+};
+
+/** An agenda line. Done and skipped meetings show a resume icon when the line is hovered. */
+export function MeetingRow({
+  time,
+  subject,
+  state = "upcoming",
+  onResume,
+}: {
+  time: string;
+  subject: string;
+  state?: RowState;
+  onResume?: () => void;
+}) {
+  const setAside = state === "done" || state === "skipped";
   return (
-    <div className={`md-row${tentative ? " is-tentative" : ""}`}>
+    <div className={`md-row${state === "upcoming" ? "" : ` is-${state}`}`}>
       <span className="md-row-bar" />
       <span className="md-row-time">{time}</span>
       <span className="md-row-subject">
         {subject}
-        {tentative ? " · provisoire" : ""}
+        {ROW_SUFFIX[state]}
       </span>
+      {setAside && onResume ? (
+        <button type="button" className="md-row-action" aria-label="Reprendre cette réunion" data-tip="Reprendre" onClick={onResume}>
+          <Icon name="resume" />
+        </button>
+      ) : (
+        <span />
+      )}
     </div>
   );
+}
+
+export type Theme = "auto" | "light" | "dark";
+const THEME_ORDER: Theme[] = ["auto", "light", "dark"];
+const THEME_NAME: Record<Theme, string> = { auto: "automatique", light: "clair", dark: "sombre" };
+
+/** Cycles automatic, light, dark. The icon shows the theme in use. */
+export function ThemeButton({ theme, onChange }: { theme: Theme; onChange: (next: Theme) => void }) {
+  const next = THEME_ORDER[(THEME_ORDER.indexOf(theme) + 1) % THEME_ORDER.length];
+  return <IconButton icon={theme} label={`Thème : ${THEME_NAME[theme]}`} onClick={() => onChange(next)} />;
 }
 
 export function NowRow({
