@@ -94,14 +94,20 @@ export const resumeMeeting = (id: string) => invoke<void>("resume_meeting", { id
 /** What is installed: this app, and the companion app on the bar. */
 export interface VersionsDto {
   app: string;
-  /** What the last update check found, if one has run: "à jour", "0.5.5 en attente". */
+  /** What the last update check found, if one has run: "à jour", "0.5.6 disponible". */
   update: string | null;
+  /** The newer release on offer, if any. */
+  available: string | null;
   /** Version of the on-bar app, or null when it is not installed. */
   bar_app: string | null;
   /** False when the bar did not answer: bar_app then means nothing. */
   bar_reachable: boolean;
+  /** The bar's app is missing or older than the one this app carries. */
+  bar_behind: boolean;
 }
 export const getVersions = () => invoke<VersionsDto>("get_versions");
+/** Installs what is on offer: this app first (it restarts), otherwise the bar's app alone. */
+export const applyUpdate = () => invoke<void>("apply_update");
 
 /** One meeting held or skipped, as kept in the local 30-day history. */
 export interface HistoryEntryDto {

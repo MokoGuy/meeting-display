@@ -6,6 +6,7 @@ import {
   MeetingDto,
   MeetingStatusDto,
   VersionsDto,
+  applyUpdate,
   endMeeting,
   getAutoStart,
   getConnection,
@@ -38,6 +39,7 @@ import {
   TextField,
   ThemeButton,
   TimeField,
+  UpdateBanner,
   VersionInfo,
   type RowState,
   type Theme,
@@ -131,6 +133,7 @@ function App() {
   const [autoLive, setAutoLive] = useState(false);
   const [autoStart, setAutoStartState] = useState(false);
   const [versions, setVersions] = useState<VersionsDto | null>(null);
+  const [updating, setUpdating] = useState(false);
   const [theme, setTheme] = useState<Theme>(() => {
     try {
       const saved = window.localStorage.getItem("theme");
@@ -150,6 +153,8 @@ function App() {
     void getMeetings().then(setMeetings);
     void getHistory().then(setHistory);
   };
+  // What is installed and what is on offer. Asked less often than the agenda: it reads the bar.
+  const refreshVersions = () => void getVersions().then(setVersions, () => setVersions(null));
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -173,7 +178,9 @@ function App() {
     });
     void getAutoStart().then(setAutoStartState);
     refresh();
+    refreshVersions();
     const timer = window.setInterval(refresh, 5000);
+    const versionsTimer = window.setInterval(refreshVersions, 60000);
 
     const step = (delta: number) =>
       setDayOffset((offset) => Math.min(DAYS_AHEAD, Math.max(-DAYS_BACK, offset + delta)));
@@ -190,8 +197,11 @@ function App() {
         void getCurrentWindow().hide();
       }
     };
-    // The panel always reopens on today.
-    const onFocus = () => setDayOffset(0);
+    // The panel always reopens on today, and looks again for something to update.
+    const onFocus = () => {
+      setDayOffset(0);
+      refreshVersions();
+    };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("focus", onFocus);
     return () => {
@@ -199,6 +209,7 @@ function App() {
       unlisten?.();
       unlistenMeetings?.();
       window.clearInterval(timer);
+      window.clearInterval(versionsTimer);
       window.removeEventListener("keydown", onKeyDown);
     };
   }, []);
@@ -256,6 +267,16 @@ function App() {
   }
 
   const current = status.meeting;
+  // Something to update: this app first, otherwise the bar's app alone. One button does both.
+  const updateText = !versions
+    ? ""
+    : versions.available
+      ? `Version ${versions.available} disponible`
+      : versions.bar_behind
+        ? versions.bar_app
+          ? "App de la barre à mettre à jour"
+          : "App de la barre à installer"
+        : "";
   const today = dayKey(now);
   const shown = new Date(now);
   shown.setDate(shown.getDate() + dayOffset);
@@ -366,6 +387,20 @@ function App() {
             )}
           </DayNav>
 
+          {updateText && (
+            <UpdateBanner
+              text={updateText}
+              busy={updating}
+              onUpdate={() => {
+                setUpdating(true);
+                // On success this app restarts (or the bar's app does) and the banner goes away.
+                void act(applyUpdate).finally(() => {
+                  setUpdating(false);
+                  refreshVersions();
+                });
+              }}
+            />
+          )}
           <div className="agenda">
             {groups.length === 0 && <p className="empty">{emptyText}</p>}
             {groups.map((group) => (

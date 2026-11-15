@@ -253,6 +253,22 @@ export function Disclosure({ label, children }: { label: string; children: React
   );
 }
 
+/** Offers an update at the top of the agenda; nothing is installed without the click. */
+export function UpdateBanner({ text, busy, onUpdate }: { text: string; busy?: boolean; onUpdate: () => void }) {
+  return (
+    <div className="md-update">
+      <span className="md-update-text">{text}</span>
+      {busy ? (
+        <span className="md-update-busy">Mise à jour…</span>
+      ) : (
+        <Button small onClick={onUpdate}>
+          Mettre à jour
+        </Button>
+      )}
+    </div>
+  );
+}
+
 /** The installed versions, two quiet lines closing the settings. */
 export function VersionInfo({ app, update, barApp }: { app: string; update?: string | null; barApp?: string | null }) {
   return (

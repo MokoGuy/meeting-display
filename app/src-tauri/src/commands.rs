@@ -364,17 +364,21 @@ pub async fn resume_meeting(app: AppHandle, id: String) -> Result<(), String> {
     Ok(())
 }
 
-/// What is installed, for the version line at the bottom of the settings.
+/// What is installed and what could be, for the version line and the update banner.
 #[derive(serde::Serialize)]
 pub struct VersionsDto {
     /// This app.
     app: String,
-    /// What the last update check found ("à jour", "0.5.5 en attente"), if one has run.
+    /// What the last update check found ("à jour", "0.5.6 disponible"), if one has run.
     update: Option<String>,
+    /// The newer release on offer, if any.
+    available: Option<String>,
     /// The on-bar companion app: its version, or `None` when it is not installed.
     bar_app: Option<String>,
-    /// Whether the bar answered at all; `bar_app` means nothing otherwise.
+    /// Whether the bar answered at all; the two bar fields mean nothing otherwise.
     bar_reachable: bool,
+    /// The bar's app is missing or older than the one this app carries.
+    bar_behind: bool,
 }
 
 #[tauri::command]
@@ -385,24 +389,43 @@ pub async fn get_versions(app: AppHandle) -> Result<VersionsDto, String> {
         .lock()
         .expect("update note poisoned")
         .clone();
+    let available = state
+        .update_available
+        .lock()
+        .expect("update state poisoned")
+        .clone();
     // The bar keeps each installed app's manifest; reading it works whether the app runs or not.
-    let manifest = match BusyBarClient::new(&state.base_url()) {
-        Ok(client) => client.storage_read(crate::companion::MANIFEST).await.ok(),
+    let on_bar = match BusyBarClient::new(&state.base_url()) {
+        Ok(client) => crate::companion::bar_app_version(&client).await.ok(),
         Err(_) => None,
     };
-    let bar_app = manifest.clone().flatten().and_then(|text| {
-        serde_json::from_str::<serde_json::Value>(&text)
-            .ok()?
-            .get("version")?
-            .as_str()
-            .map(str::to_string)
-    });
+    let bar_reachable = on_bar.is_some();
+    let bar_app = on_bar.flatten();
     Ok(VersionsDto {
         app: app.package_info().version.to_string(),
         update,
+        available,
+        bar_behind: bar_reachable && crate::companion::bar_app_behind(bar_app.as_deref()),
         bar_app,
-        bar_reachable: manifest.is_some(),
+        bar_reachable,
     })
+}
+
+/// The user's "update" click: this app first when a newer release is on offer (it restarts,
+/// and the new version then updates the bar), otherwise the bar's app alone.
+#[tauri::command]
+pub async fn apply_update(app: AppHandle) -> Result<(), String> {
+    let state = app.state::<AppState>();
+    let available = state
+        .update_available
+        .lock()
+        .expect("update state poisoned")
+        .is_some();
+    if available {
+        return crate::updater::install(&app).await;
+    }
+    let client = BusyBarClient::new(&state.base_url()).map_err(|error| error.to_string())?;
+    crate::companion::install_bar_app(&client).await
 }
 
 /// The local history: meetings held or skipped over the last 30 days.

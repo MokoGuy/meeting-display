@@ -24,7 +24,8 @@ No account, no cloud, no browser extension. One calendar link, one USB cable.
   planned time against real time.
 - **Private by design.** Your calendar is read on your PC and nothing leaves it. The app talks
   to the bar over its local connection only.
-- **Updates itself.** Install once.
+- **Updates on your say-so.** The panel tells you when a new version is out; one click updates
+  the app and the bar.
 
 ## On the bar
 
@@ -38,7 +39,7 @@ No account, no cloud, no browser extension. One calendar link, one USB cable.
 | OK | return to the current meeting |
 
 The wheel and buttons are handled by a small companion app that runs on the bar itself.
-Meeting Display installs it on the bar for you and keeps it up to date: see
+Meeting Display carries it and puts it on the bar in one click, and updates it the same way: see
 [`bar-app/README.md`](bar-app/README.md).
 
 ## On your PC

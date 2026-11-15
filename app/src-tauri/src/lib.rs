@@ -43,6 +43,14 @@ pub fn run() {
             if let Ok(dir) = app.path().app_data_dir() {
                 app.state::<state::AppState>()
                     .load_history(dir.join("history.json"));
+                // Left by an update the user asked for: this new version finishes it on the bar.
+                let flag = dir.join(updater::BAR_FLAG);
+                if flag.exists() {
+                    let _ = std::fs::remove_file(&flag);
+                    app.state::<state::AppState>()
+                        .bar_install_allowed
+                        .store(true, std::sync::atomic::Ordering::SeqCst);
+                }
             }
             tray::build(app, "Meeting Display — connexion…")?;
             if let Some(window) = app.get_webview_window("main") {
@@ -101,7 +109,8 @@ pub fn run() {
             commands::end_meeting,
             commands::resume_meeting,
             commands::get_history,
-            commands::get_versions
+            commands::get_versions,
+            commands::apply_update
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

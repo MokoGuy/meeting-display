@@ -1,4 +1,4 @@
-# État du projet — Meeting Display 0.5.5 (15 novembre 2026)
+# État du projet — Meeting Display 0.5.6 (15 novembre 2026)
 
 Ce document ne retient comme acquis que ce qui a été vérifié, avec la preuve. Les anciennes
 mentions « validé » de septembre 2026 venaient d'agents, pas de l'utilisateur, et ne sont pas reprises.
@@ -75,8 +75,9 @@ pointe l'app installée sur un calendrier de test, puis remet les réglages d'or
 
 - **La molette et les boutons demandent l'app embarquée** (`bar-app/`), parce que l'API de la barre
   ne signale pas les appuis à un programme sur PC. Elle remplace l'horloge tant qu'elle est ouverte.
-- **L'app Windows installe l'app embarquée sans demander**, y compris sur une barre qui ne l'a
-  jamais eue ; il n'y a pas de réglage pour l'en empêcher.
+- **Aucune mise à jour ne part seule** : ni celle de l'app Windows, ni celle de l'app embarquée.
+  Le panneau la propose et attend le clic. Une installation qui n'ouvre jamais son panneau reste
+  donc sur sa version.
 - **Les touches ont été simulées**, pas pressées : la vraie molette et les vrais boutons restent à essayer.
 - **Pas de lien de visioconférence ni de participants.** Le calendrier publié par Outlook ne
   contient ni description ni participants : pas de bouton « rejoindre », et le chiffre de l'icône

@@ -57,7 +57,11 @@ export function installMocks() {
       case "get_meetings":
         return current ? [...earlier, current, ...later] : [];
       case "get_versions":
-        return { app: "0.5.4", update: "à jour", bar_app: "0.5.4", bar_reachable: true };
+        return new URLSearchParams(window.location.search).has("update")
+          ? { app: "0.5.5", update: "0.5.6 disponible", available: "0.5.6", bar_app: "0.5.5", bar_reachable: true, bar_behind: false }
+          : { app: "0.5.5", update: "à jour", available: null, bar_app: "0.5.5", bar_reachable: true, bar_behind: false };
+      case "apply_update":
+        return new Promise(() => {});
       case "get_history": {
         if (!current) return [];
         const entry = (id: string, subject: string, startIn: number, planned: number, actual: number | null) => ({

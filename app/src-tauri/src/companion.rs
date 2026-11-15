@@ -101,46 +101,52 @@ pub fn needs_install(on_bar: Option<&str>, ours: &str) -> bool {
     }
 }
 
-/// Brings the bar's on-bar app up to the version carried by this app, then starts it. Runs
-/// once each time the bar starts answering, and never while a meeting is on screen: the
-/// install stops whatever the bar is showing for a few seconds.
-async fn ensure_bar_app(state: &AppState, client: &BusyBarClient) {
-    let idle = matches!(
-        *state.meeting_state.lock().expect("meeting state poisoned"),
-        MeetingState::Idle
-    );
-    if !idle {
-        return;
-    }
-    // Ok(None): the bar answered and has no such file. Err: the bar did not answer; try later.
-    let Ok(manifest) = client.storage_read(MANIFEST).await else {
-        return;
-    };
-    let on_bar = manifest.and_then(|text| {
+/// The version of the on-bar app the bar holds. `Ok(None)`: the bar answered and has none.
+/// `Err`: the bar did not answer.
+pub async fn bar_app_version(client: &BusyBarClient) -> Result<Option<String>, ()> {
+    let manifest = client.storage_read(MANIFEST).await.map_err(|_| ())?;
+    Ok(manifest.and_then(|text| {
         serde_json::from_str::<Value>(&text)
             .ok()?
             .get("version")?
             .as_str()
             .map(str::to_string)
-    });
+    }))
+}
+
+/// Whether the bar's on-bar app is missing or older than the one this app carries.
+pub fn bar_app_behind(on_bar: Option<&str>) -> bool {
+    needs_install(on_bar, PACKAGE_VERSION)
+}
+
+/// Puts the on-bar app this app carries on the bar, then starts it. Only ever called because
+/// the user asked for an update: the install stops whatever the bar shows for a few seconds.
+pub async fn install_bar_app(client: &BusyBarClient) -> Result<(), String> {
+    let installed = client.install_app(PACKAGE).await;
+    tracing::info!(companion = "install", to = PACKAGE_VERSION, ok = installed.is_ok());
+    installed.map_err(|error| format!("Installation sur la barre impossible : {error}"))?;
+    let launched = client.launch_app(APP_ID).await.is_ok();
+    tracing::info!(companion = "launch", launched);
+    Ok(())
+}
+
+/// Runs once each time the bar starts answering. Normally it changes nothing: the panel
+/// offers the update. It installs only to finish an update the user asked for, when this
+/// app has just restarted as the new version and the bar's app is now the older one.
+async fn ensure_bar_app(state: &AppState, client: &BusyBarClient) {
+    let Ok(on_bar) = bar_app_version(client).await else {
+        return;
+    };
     state
         .companion
         .lock()
         .expect("companion state poisoned")
         .bar_app_checked = true;
-    if !needs_install(on_bar.as_deref(), PACKAGE_VERSION) {
-        return;
-    }
-    let installed = client.install_app(PACKAGE).await;
-    tracing::info!(
-        companion = "install",
-        from = on_bar.as_deref().unwrap_or("none"),
-        to = PACKAGE_VERSION,
-        ok = installed.is_ok()
-    );
-    if installed.is_ok() {
-        let launched = client.launch_app(APP_ID).await.is_ok();
-        tracing::info!(companion = "launch", launched);
+    let allowed = state
+        .bar_install_allowed
+        .swap(false, std::sync::atomic::Ordering::SeqCst);
+    if allowed && bar_app_behind(on_bar.as_deref()) {
+        let _ = install_bar_app(client).await;
     }
 }
 

@@ -1,4 +1,4 @@
-﻿// Meeting Display, on-bar companion.
+// Meeting Display, on-bar companion.
 //
 // The Windows app is the brain: it reads the calendar and writes a small agenda
 // file into this app's data folder. This app is the display and the hands: it

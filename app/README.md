@@ -63,7 +63,7 @@ Dans le pied du panneau, le bouton de thème alterne automatique (réglage de Wi
 
 ## Molette et boutons de la barre
 
-Avec l'app embarquée (dossier `bar-app/`), que l'app Windows installe et met à jour elle-même sur la barre, la molette passe
+Avec l'app embarquée (dossier `bar-app/`), que l'app Windows installe et met à jour sur la barre quand tu cliques sur **Mettre à jour**, la molette passe
 d'une réunion à la suivante ou à la précédente (aujourd'hui et les jours suivants) et les boutons Start et Back démarrent, terminent, ignorent ou
 reprennent une réunion directement sur la barre. Voir [`bar-app/README.md`](../bar-app/README.md).
 
@@ -79,7 +79,7 @@ reprennent une réunion directement sur la barre. Voir [`bar-app/README.md`](../
 | Lancer au démarrage de Windows | démarre l'app avec la session |
 
 **Quelle version est installée ?** En bas des réglages, à gauche du bouton Enregistrer : la version
-de l'app Windows (avec « à jour » ou la version en attente, une fois la première vérification
+de l'app Windows (avec « à jour » ou la version disponible, une fois la première vérification
 faite), puis celle de l'app embarquée sur la barre. Sur la barre, l'écran arrière affiche la version
 de l'app embarquée en haut à droite quand aucune réunion n'approche.
 
@@ -116,10 +116,11 @@ remis en place à l'arrêt (Ctrl+C). Sans `--use`, le script affiche un lien
    (il faut un jeton GitHub avec le droit `workflow`), puis pousser un tag `v<version>`. Le secret
    `TAURI_SIGNING_PRIVATE_KEY` est déjà enregistré dans le dépôt.
 
-Les apps installées cherchent une mise à jour une minute après leur lancement puis toutes les six
-heures, et l'installent quand aucune réunion n'est à l'écran. L'adresse consultée est dans
-`plugins.updater.endpoints` de `tauri.conf.json`. Une fois redémarrée, l'app mise à jour installe
-à son tour sur la barre l'app embarquée qu'elle transporte.
+Les apps installées cherchent une mise à jour vingt secondes après leur lancement puis toutes les
+six heures, et n'installent rien d'elles-mêmes : le panneau affiche « Version x disponible » en haut
+de l'agenda, avec un bouton **Mettre à jour**. Au clic, l'app se met à jour et redémarre, puis la
+nouvelle version installe sur la barre l'app embarquée qu'elle transporte. L'adresse consultée est
+dans `plugins.updater.endpoints` de `tauri.conf.json`.
 
 ## Design system
 

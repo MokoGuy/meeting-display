@@ -33,6 +33,10 @@ pub struct AppState {
     pub last_screen: Mutex<Option<crate::scheduler::Drawn>>,
     /// What the last update check found, in the panel's words; `None` until one has run.
     pub update_note: Mutex<Option<String>>,
+    /// The newer release on offer, if the last check found one. Installed only on request.
+    pub update_available: Mutex<Option<String>>,
+    /// The user asked for an update: the bar's app may be installed without asking again.
+    pub bar_install_allowed: AtomicBool,
     /// Whether our assets (icon and sounds) have been stored on the bar since the last failure.
     pub icon_uploaded: AtomicBool,
 }
@@ -81,6 +85,8 @@ impl AppState {
             history: Mutex::new(crate::history::History::default()),
             last_screen: Mutex::new(None),
             update_note: Mutex::new(None),
+            update_available: Mutex::new(None),
+            bar_install_allowed: AtomicBool::new(false),
             icon_uploaded: AtomicBool::new(false),
         }
     }

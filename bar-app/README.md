@@ -48,16 +48,17 @@ et réinstaller l'app.
 
 ## Installer sur la barre
 
-Il n'y a rien à faire : **l'app Windows transporte l'app embarquée et l'installe elle-même**.
-À chaque fois que la barre se met à répondre (démarrage de l'app Windows, barre rebranchée), elle
-compare la version présente sur la barre avec celle qu'elle transporte. Si la barre n'a pas l'app,
-ou en a une plus ancienne, elle l'installe puis la lance ; cela prend quelques secondes. Elle ne
-le fait jamais pendant une réunion, et ne remplace jamais une version plus récente que la sienne.
+**L'app Windows transporte l'app embarquée et l'installe sur un clic.** Elle compare la version
+présente sur la barre avec celle qu'elle transporte. Si la barre n'a pas l'app, ou en a une plus
+ancienne, le panneau affiche en haut de l'agenda « App de la barre à installer » (ou « à mettre à
+jour ») avec un bouton **Mettre à jour**. Le clic l'installe puis la lance ; quelques secondes.
+Rien n'est installé sans ce clic, et une version plus récente que la sienne n'est jamais remplacée.
 
-Une mise à jour de l'app Windows met donc aussi à jour la barre, sans geste de ta part.
+Quand c'est l'app Windows qui a une nouvelle version, le même bouton fait les deux : l'app Windows
+se met à jour et redémarre, puis la nouvelle version installe son app embarquée sur la barre.
 
-Pour retirer l'app embarquée : `npm run app:uninstall` dans ce dossier. L'app Windows la
-réinstallera à son prochain démarrage ; il n'y a pas encore de réglage pour l'en empêcher.
+Pour retirer l'app embarquée : `npm run app:uninstall` dans ce dossier. Le panneau proposera
+alors de la réinstaller.
 
 ### Pour développer
 
