@@ -38,7 +38,8 @@ puis le reste de la journée et les jours suivants.
 
 Sur la réunion du moment : **Démarrer** la valide (à l'heure, ou en avance), l'icône **Ignorer** l'écarte,
 **Terminer** la clôt. Une réunion terminée (« réalisée ») ou ignorée reste à son heure dans la liste,
-grisée ; au survol de sa ligne, une icône **Reprendre** la remet en jeu, elle seule.
+grisée ; au survol de sa ligne, une icône **Reprendre** la remet en jeu, elle seule
+(aujourd'hui ou un jour à venir ; les jours passés restent tels quels dans l'historique).
 Clic droit sur l'icône puis **Démarrer la réunion** valide aussi. Le bouton physique de la barre
 ne peut pas servir à valider (l'API de la barre ne signale pas les appuis). Avec l'option
 **Passer en réunion automatiquement à l'heure**, la validation est faite d'office.

@@ -276,8 +276,9 @@ function App() {
               prévu {span(entry.planned_secs)} · <strong>réel {span(actual)}</strong>
             </>
           ),
-        // Only today's meetings can be put back in play.
-        resumable: dayKey(entry.start) === today,
+        // Today's meetings and later ones can be put back in play: a meeting skipped by mistake
+        // days ahead must not be lost. Earlier days are history and stay as they are.
+        resumable: new Date(entry.start).getTime() >= new Date(today).getTime(),
       };
     });
   const coming: Item[] = meetings
