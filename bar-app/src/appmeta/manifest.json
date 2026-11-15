@@ -1,0 +1,9 @@
+{
+  "format_version": 1,
+  "id": "meeting-display",
+  "name": "Meeting Display",
+  "version": "0.5.0",
+  "api_version": "27.12.0",
+  "description": "Agenda and wheel for Meeting Display",
+  "author": "MokoGuy"
+}

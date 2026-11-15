@@ -1,4 +1,4 @@
-# État du projet — Meeting Display 0.4.1 (15 novembre 2026)
+# État du projet — Meeting Display 0.5.0 (15 novembre 2026)
 
 Ce document ne retient comme acquis que ce qui a été vérifié, avec la preuve. Les anciennes
 mentions « validé » de septembre 2026 venaient d'agents, pas de l'utilisateur, et ne sont pas reprises.
@@ -39,6 +39,8 @@ option de démarrage automatique des réunions, mise à jour automatique. Le gui
 | Release publique | téléchargement anonyme de `latest.json` et de l'installeur | HTTP 200 sans connexion GitHub |
 | Historique sur disque | tests unitaires : enregistrement, durée prévue et réelle, une entrée par réunion, fenêtre de 30 jours, relecture après redémarrage | 5 tests réussis |
 | Réunion lancée en avance | test unitaire | dure sa durée prévue à partir du lancement |
+| App embarquée : molette et boutons | app installée sur la barre, calendrier de test, touches simulées par l'API | défilement des réunions, retour par OK, Start démarre puis termine, Back ignore, Start reprend ; chaque action reçue par l'app Windows et inscrite dans l'historique |
+| Lancement de l'app embarquée | démarrage de l'app Windows | l'app embarquée est lancée et reçoit l'agenda |
 | Calendrier de test | `node tools/test-calendar.mjs --scenario day` relu par le code de l'app | 6 réunions gardées, 3 écartées comme prévu |
 
 ## Vérifié seulement en aperçu navigateur (données fictives)
@@ -68,9 +70,11 @@ pointe l'app installée sur un calendrier de test, puis remet les réglages d'or
 
 ## Limites connues
 
-- **Le bouton physique et la molette de la barre ne sont pas utilisables.** L'API de la barre ne
-  signale pas les appuis à un programme sur PC. Parcourir les réunions à la molette demanderait
-  une app installée sur la barre elle-même.
+- **La molette et les boutons demandent l'app embarquée** (`bar-app/`), parce que l'API de la barre
+  ne signale pas les appuis à un programme sur PC. Elle remplace l'horloge tant qu'elle est ouverte.
+- **L'app embarquée n'est pas installée par l'app Windows** : il faut la compiler et l'installer à la
+  main, depuis PowerShell.
+- **Les touches ont été simulées**, pas pressées : la vraie molette et les vrais boutons restent à essayer.
 - **Pas de lien de visioconférence ni de participants.** Le calendrier publié par Outlook ne
   contient ni description ni participants : pas de bouton « rejoindre », et le chiffre de l'icône
   est le nombre de réunions restantes du jour, pas le nombre d'invités.

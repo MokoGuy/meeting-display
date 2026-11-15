@@ -263,6 +263,78 @@ impl BusyBarClient {
             .await
     }
 
+    /// Reads a text file from the bar's storage; `None` when it does not exist.
+    pub async fn storage_read(&self, path: &str) -> Result<Option<String>, Error> {
+        let response = self
+            .http
+            .get(self.endpoint("/api/storage/read"))
+            .query(&[("path", path)])
+            .send()
+            .await
+            .map_err(|error| Error::Unreachable(error.to_string()))?;
+        if !response.status().is_success() {
+            return Ok(None);
+        }
+        response
+            .text()
+            .await
+            .map(Some)
+            .map_err(|error| Error::Decode(error.to_string()))
+    }
+
+    /// Writes (replaces) a file in the bar's storage.
+    pub async fn storage_write(&self, path: &str, bytes: &[u8]) -> Result<(), Error> {
+        let response = self
+            .http
+            .post(self.endpoint("/api/storage/write"))
+            .query(&[("path", path)])
+            .header("Content-Type", "application/octet-stream")
+            .body(bytes.to_vec())
+            .send()
+            .await
+            .map_err(|error| Error::Unreachable(error.to_string()))?;
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(Error::Http {
+                status: status.as_u16(),
+                message: error_message(&body),
+            });
+        }
+        Ok(())
+    }
+
+    /// Removes a file from the bar's storage; a missing file is not an error.
+    pub async fn storage_remove(&self, path: &str) -> Result<(), Error> {
+        self.http
+            .delete(self.endpoint("/api/storage/remove"))
+            .query(&[("path", path)])
+            .send()
+            .await
+            .map(|_| ())
+            .map_err(|error| Error::Unreachable(error.to_string()))
+    }
+
+    /// Starts an installed JavaScript app on the bar.
+    pub async fn launch_app(&self, app_id: &str) -> Result<(), Error> {
+        let response = self
+            .http
+            .post(self.endpoint("/api/apps/launch"))
+            .query(&[("app_id", app_id)])
+            .send()
+            .await
+            .map_err(|error| Error::Unreachable(error.to_string()))?;
+        let status = response.status();
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            return Err(Error::Http {
+                status: status.as_u16(),
+                message: error_message(&body),
+            });
+        }
+        Ok(())
+    }
+
     /// Current audio volume of the bar (0-100).
     pub async fn volume(&self) -> Result<f64, Error> {
         let body: Value = self.get_json("/api/audio/volume").await?;

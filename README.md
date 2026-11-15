@@ -5,6 +5,7 @@ plugged in over USB, and walks you through each meeting: approach, countdown, st
 time left, overrun.
 
 - **User guide, build and release** (in French): [`app/README.md`](app/README.md)
+- **Wheel and buttons on the bar itself**: the optional on-bar companion app, [`bar-app/README.md`](bar-app/README.md)
 - **What is tested and what is not**: [`docs/STATUS.md`](docs/STATUS.md)
 - **Download**: the latest installer is on the [Releases](../../releases/latest) page.
   Installed copies update themselves.

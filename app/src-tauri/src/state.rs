@@ -25,6 +25,8 @@ pub struct AppState {
     pub discreet_mode: Mutex<bool>,
     pub auto_start: Mutex<bool>,
     /// Meetings the user skipped or ended by hand: ignored until the app restarts.
+    /// Link with the on-bar companion app, when it is installed.
+    pub companion: Mutex<crate::companion::Link>,
     /// What the user did with their meetings (held or skipped), saved on disk.
     pub history: Mutex<crate::history::History>,
     /// What the scheduler last drew on the bar, and when (None = nothing of ours on screen).
@@ -73,6 +75,7 @@ impl AppState {
             quiet_hours_end: Mutex::new(quiet_hours_end),
             discreet_mode: Mutex::new(discreet_mode),
             auto_start: Mutex::new(auto_start),
+            companion: Mutex::new(crate::companion::Link::default()),
             history: Mutex::new(crate::history::History::default()),
             last_screen: Mutex::new(None),
             icon_uploaded: AtomicBool::new(false),

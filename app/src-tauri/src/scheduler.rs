@@ -209,7 +209,43 @@ pub fn pick_view(
 
 /// Puts `view` on the bar (or removes our screen when `None`), sending a
 /// request only when something changed or the keep-alive is due.
-async fn show(state: &AppState, view: Option<(ScreenKind, DrawRequest)>) {
+async fn show(state: &AppState, view: Option<(ScreenKind, DrawRequest)>, companion_active: bool) {
+    if companion_active {
+        // The companion draws the screens itself. This app keeps the sounds,
+        // and takes its own drawing off the bar.
+        let kind = view.as_ref().map(|(kind, _)| *kind);
+        let previous = std::mem::replace(
+            &mut state
+                .companion
+                .lock()
+                .expect("companion state poisoned")
+                .last_kind,
+            kind,
+        );
+        if kind != previous {
+            if let Some(sound) = kind.and_then(screens::entry_sound) {
+                play_audibly(state.base_url(), sound);
+            }
+        }
+        let drawn = state
+            .last_screen
+            .lock()
+            .expect("screen state poisoned")
+            .take();
+        if drawn.is_some() {
+            if let Ok(client) = BusyBarClient::new(&state.base_url()) {
+                let _guard = state.draw_lock.lock().await;
+                let _ = client.clear(APP).await;
+            }
+        }
+        return;
+    }
+    // Back in charge of the screen: forget what the companion was showing.
+    state
+        .companion
+        .lock()
+        .expect("companion state poisoned")
+        .last_kind = None;
     let last = state
         .last_screen
         .lock()
@@ -287,6 +323,7 @@ pub async fn tick(app: &tauri::AppHandle) {
     if state.is_shutting_down() {
         return;
     }
+    let companion_active = crate::companion::sync(app).await;
     let now = Utc::now();
     let quiet_start = state
         .quiet_hours_start
@@ -396,7 +433,7 @@ pub async fn tick(app: &tauri::AppHandle) {
             (kind, screens::build(kind, &meeting, now, badge))
         })
     };
-    show(&state, view).await;
+    show(&state, view, companion_active).await;
 }
 
 #[cfg(test)]
