@@ -90,3 +90,16 @@ export const skipMeeting = () => invoke<void>("skip_meeting");
 export const endMeeting = () => invoke<void>("end_meeting");
 /** Puts one meeting skipped or ended by hand back in play. */
 export const resumeMeeting = (id: string) => invoke<void>("resume_meeting", { id });
+
+/** One meeting held or skipped, as kept in the local 30-day history. */
+export interface HistoryEntryDto {
+  id: string;
+  subject: string;
+  /** Scheduled start, or the moment it was started when started ahead of time. */
+  start: string;
+  planned_secs: number;
+  state: "done" | "skipped";
+  started_at: string | null;
+  ended_at: string | null;
+}
+export const getHistory = () => invoke<HistoryEntryDto[]>("get_history");

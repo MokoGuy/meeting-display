@@ -1,4 +1,4 @@
-# État du projet — Meeting Display 0.3.7 (15 novembre 2026)
+# État du projet — Meeting Display 0.4.0 (15 novembre 2026)
 
 Ce document ne retient comme acquis que ce qui a été vérifié, avec la preuve. Les anciennes
 mentions « validé » de septembre 2026 venaient d'agents, pas de l'utilisateur, et ne sont pas reprises.
@@ -37,9 +37,14 @@ option de démarrage automatique des réunions, mise à jour automatique. Le gui
 | Build signé | `node tools/release.mjs` | installeur, signature et `latest.json` produits |
 | Mise à jour automatique | version 0.3.1 installée, release 0.3.2 publiée, app relancée | l'app a installé la 0.3.2 seule, une minute après son lancement, puis s'est relancée |
 | Release publique | téléchargement anonyme de `latest.json` et de l'installeur | HTTP 200 sans connexion GitHub |
+| Historique sur disque | tests unitaires : enregistrement, durée prévue et réelle, une entrée par réunion, fenêtre de 30 jours, relecture après redémarrage | 5 tests réussis |
+| Réunion lancée en avance | test unitaire | dure sa durée prévue à partir du lancement |
 | Calendrier de test | `node tools/test-calendar.mjs --scenario day` relu par le code de l'app | 6 réunions gardées, 3 écartées comme prévu |
 
 ## Vérifié seulement en aperçu navigateur (données fictives)
+
+- Version 0.4.0 : navigation par jour (flèches, bouton Aujourd'hui, Échap), lignes d'historique avec durée prévue et durée réelle, total d'un jour passé, jour vide.
+- Réunions réalisées ou ignorées qui restent à leur heure, icône Reprendre au survol, bouton de thème, bouton Ignorer en icône.
 
 - Le panneau en agenda et ses états : à venir, c'est l'heure, en réunion, sans calendrier.
 - Les composants du design system : interrupteur, champ d'heure au clavier, volet Avancé.
@@ -50,7 +55,8 @@ option de démarrage automatique des réunions, mise à jour automatique. Le gui
 |---|---|
 | Le panneau dans la vraie fenêtre de l'app | jamais ouvert ni cliqué depuis l'app installée |
 | Boutons Démarrer, Ignorer, Terminer | le code est simple et compilé, mais aucun clic réel n'a été fait |
-| Démarrer une réunion en avance | idem |
+| Démarrer une réunion en avance | essayé par l'utilisateur avant le correctif de durée ; pas rejoué depuis |
+| Historique dans l'app installée | le fichier n'a encore reçu aucune vraie réunion |
 | Workflow GitHub Actions | fourni comme modèle (`tools/release-workflow.yml`), jamais exécuté : le jeton GitHub du poste n'a pas le droit `workflow` |
 | Lancement au démarrage de Windows | interrupteur présent, jamais activé |
 | Heures de silence et mode discret en réel | tests unitaires seulement |

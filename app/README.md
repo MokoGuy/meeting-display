@@ -47,6 +47,17 @@ Ne sont pas affichées : les journées entières, les réunions annulées, et le
 « libre » (dont les réunions refusées, qu'Outlook publie ainsi). Les réunions provisoires sont
 affichées sans LED.
 
+### Historique
+
+Chaque réunion réalisée ou ignorée est enregistrée sur le poste, 30 jours glissants, dans
+`%APPDATA%com.mokoguy.meeting-displayhistory.json`. Rien n'est envoyé ailleurs.
+
+Les flèches de l'en-tête (ou les flèches gauche et droite du clavier) font défiler les jours :
+30 jours en arrière, 7 en avant. Le bouton **Aujourd'hui**, ou Échap, ramène au jour courant, et le
+panneau se rouvre toujours sur aujourd'hui. Une réunion réalisée affiche sa durée prévue et sa durée
+réelle ; un jour passé se termine par son total. Une réunion lancée en avance dure sa durée prévue à
+partir du lancement.
+
 Dans le pied du panneau, le bouton de thème alterne automatique (réglage de Windows), clair et sombre.
 
 ## Paramètres

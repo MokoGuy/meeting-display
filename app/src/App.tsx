@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   ConnectionDto,
+  HistoryEntryDto,
   MeetingDto,
   MeetingStatusDto,
   endMeeting,
   getAutoStart,
   getConnection,
+  getHistory,
   getMeetingStatus,
   getMeetings,
   getSettings,
@@ -23,6 +25,7 @@ import {
 } from "./api";
 import {
   Button,
+  DayNav,
   Disclosure,
   IconButton,
   IconPill,
@@ -69,6 +72,24 @@ function duration(ms: number) {
   return `${Math.floor(minutes / 1440)} j`;
 }
 
+/** A length in seconds as "16 min" or "1 h 12". */
+function span(seconds: number) {
+  const minutes = Math.max(seconds > 0 ? 1 : 0, Math.round(seconds / 60));
+  if (minutes < 60) return `${minutes} min`;
+  const rest = minutes % 60;
+  return rest === 0 ? `${Math.floor(minutes / 60)} h` : `${Math.floor(minutes / 60)} h ${String(rest).padStart(2, "0")}`;
+}
+
+/** How long a recorded meeting really lasted, in seconds; null when it was skipped. */
+function actualSeconds(entry: HistoryEntryDto) {
+  if (!entry.started_at || !entry.ended_at) return null;
+  return Math.max(0, (new Date(entry.ended_at).getTime() - new Date(entry.started_at).getTime()) / 1000);
+}
+
+/** How far the panel lets you travel from today, in days. */
+const DAYS_BACK = 30;
+const DAYS_AHEAD = 7;
+
 /** The state line and the actions of the expanded row, for each phase. */
 function nowLine(status: MeetingStatusDto, now: number) {
   const meeting = status.meeting!;
@@ -91,6 +112,9 @@ function App() {
   const [connection, setConnection] = useState(initialConnection);
   const [status, setStatus] = useState<MeetingStatusDto>({ phase: "none", meeting: null, dismissed: {} });
   const [meetings, setMeetings] = useState<MeetingDto[]>([]);
+  const [history, setHistory] = useState<HistoryEntryDto[]>([]);
+  // 0 is today, -1 yesterday, +1 tomorrow.
+  const [dayOffset, setDayOffset] = useState(0);
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
@@ -113,11 +137,14 @@ function App() {
   });
   const viewRef = useRef(view);
   viewRef.current = view;
+  const dayOffsetRef = useRef(dayOffset);
+  dayOffsetRef.current = dayOffset;
 
   const refresh = () => {
     setNow(Date.now());
     void getMeetingStatus().then(setStatus);
     void getMeetings().then(setMeetings);
+    void getHistory().then(setHistory);
   };
 
   useEffect(() => {
@@ -144,16 +171,27 @@ function App() {
     refresh();
     const timer = window.setInterval(refresh, 5000);
 
+    const step = (delta: number) =>
+      setDayOffset((offset) => Math.min(DAYS_AHEAD, Math.max(-DAYS_BACK, offset + delta)));
     const onKeyDown = (event: KeyboardEvent) => {
+      const typing = event.target instanceof HTMLInputElement;
+      if (viewRef.current === "main" && !typing && event.key === "ArrowLeft") return step(-1);
+      if (viewRef.current === "main" && !typing && event.key === "ArrowRight") return step(1);
       if (event.key !== "Escape") return;
       if (viewRef.current !== "main") {
         setView("main");
+      } else if (dayOffsetRef.current !== 0) {
+        setDayOffset(0);
       } else {
         void getCurrentWindow().hide();
       }
     };
+    // The panel always reopens on today.
+    const onFocus = () => setDayOffset(0);
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("focus", onFocus);
     return () => {
+      window.removeEventListener("focus", onFocus);
       unlisten?.();
       unlistenMeetings?.();
       window.clearInterval(timer);
@@ -215,70 +253,123 @@ function App() {
 
   const current = status.meeting;
   const today = dayKey(now);
-  const rowState = (meeting: MeetingDto): RowState =>
-    status.dismissed[meeting.id] ?? (meeting.show_as === "tentative" ? "tentative" : "upcoming");
-  // Meetings still to come, plus today's set-aside ones, which stay at their time in the list.
-  const others = meetings
-    .filter((meeting) => meeting.id !== current?.id)
-    .filter(
-      (meeting) =>
-        new Date(meeting.end).getTime() > now || (status.dismissed[meeting.id] && dayKey(meeting.start) === today),
-    )
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-  // Day groups in order; the current meeting leads its own day.
-  const groups: { key: string; first: string; rows: MeetingDto[] }[] = [];
-  for (const meeting of others) {
-    const key = dayKey(meeting.start);
+  const shown = new Date(now);
+  shown.setDate(shown.getDate() + dayOffset);
+  const shownDay = dayKey(shown.getTime());
+  const onToday = dayOffset === 0;
+
+  // One list model for what was done (history) and what is coming (calendar).
+  type Item = { id: string; subject: string; start: number; state: RowState; detail?: ReactNode; resumable: boolean };
+  const recorded = new Set(history.map((entry) => entry.id));
+  const past: Item[] = history
+    .filter((entry) => entry.id !== current?.id)
+    .map((entry) => {
+      const actual = actualSeconds(entry);
+      return {
+        id: entry.id,
+        subject: entry.subject,
+        start: new Date(entry.start).getTime(),
+        state: entry.state,
+        detail:
+          actual === null ? undefined : (
+            <>
+              prévu {span(entry.planned_secs)} · <strong>réel {span(actual)}</strong>
+            </>
+          ),
+        // Only today's meetings can be put back in play.
+        resumable: dayKey(entry.start) === today,
+      };
+    });
+  const coming: Item[] = meetings
+    .filter((meeting) => meeting.id !== current?.id && !recorded.has(meeting.id))
+    .filter((meeting) => new Date(meeting.end).getTime() > now)
+    .map((meeting) => ({
+      id: meeting.id,
+      subject: meeting.subject,
+      start: new Date(meeting.start).getTime(),
+      state: meeting.show_as === "tentative" ? "tentative" : "upcoming",
+      resumable: false,
+    }));
+  // Today shows today's history and everything to come; any other day shows that day only.
+  const items = [...past, ...coming]
+    .filter((item) => (onToday ? item.start >= new Date(today).getTime() : dayKey(item.start) === shownDay))
+    .sort((a, b) => a.start - b.start);
+  const groups: { key: string; first: number; rows: Item[] }[] = [];
+  for (const item of items) {
+    const key = dayKey(item.start);
     const group = groups.find((entry) => entry.key === key);
-    if (group) group.rows.push(meeting);
-    else groups.push({ key, first: meeting.start, rows: [meeting] });
+    if (group) group.rows.push(item);
+    else groups.push({ key, first: item.start, rows: [item] });
   }
   const currentDay = current ? dayKey(current.start) : today;
-  if (current && !groups.some((group) => group.key === currentDay)) {
-    groups.unshift({ key: currentDay, first: current.start, rows: [] });
+  const currentShown = !!current && (onToday || currentDay === shownDay);
+  if (current && currentShown && !groups.some((group) => group.key === currentDay)) {
+    groups.push({ key: currentDay, first: new Date(current.start).getTime(), rows: [] });
   }
-  groups.sort((a, b) => new Date(a.first).getTime() - new Date(b.first).getTime());
-  const todayCount =
-    others.filter((meeting) => dayKey(meeting.start) === today && !status.dismissed[meeting.id]).length +
-    (current && currentDay === today ? 1 : 0);
+  groups.sort((a, b) => a.first - b.first);
+  const todayCount = coming.filter((item) => dayKey(item.start) === today).length + (current && currentDay === today ? 1 : 0);
   const line = current ? nowLine(status, now) : null;
   // Rows keep their place in time: the ones that started before the current meeting come above it.
-  const isBeforeCurrent = (meeting: MeetingDto, groupKey: string) =>
-    !!current && groupKey === currentDay && new Date(meeting.start).getTime() < new Date(current.start).getTime();
-  const row = (meeting: MeetingDto) => (
+  const isBeforeCurrent = (item: Item, groupKey: string) =>
+    !!current && groupKey === currentDay && item.start < new Date(current.start).getTime();
+  const row = (item: Item) => (
     <MeetingRow
-      key={meeting.id}
-      time={hhmm(meeting.start)}
-      subject={meeting.subject}
-      state={rowState(meeting)}
-      onResume={() => void act(() => resumeMeeting(meeting.id))}
+      key={item.id}
+      time={hhmm(new Date(item.start).toISOString())}
+      subject={item.subject}
+      state={item.state}
+      detail={item.detail}
+      onResume={item.resumable ? () => void act(() => resumeMeeting(item.id)) : undefined}
     />
   );
+  // Total of a past day: meetings held, planned against actual.
+  const held = history.filter((entry) => dayKey(entry.start) === shownDay && entry.state === "done");
+  const summary =
+    !onToday && held.length > 0
+      ? `${held.length} réunion${held.length > 1 ? "s" : ""} réalisée${held.length > 1 ? "s" : ""} · prévu ${span(
+          held.reduce((sum, entry) => sum + entry.planned_secs, 0),
+        )} · réel ${span(held.reduce((sum, entry) => sum + (actualSeconds(entry) ?? 0), 0))}`
+      : "";
+  const emptyText = !icsUrl.trim()
+    ? "Ajoute le lien ICS de ton calendrier dans les réglages pour voir tes réunions ici et sur la barre."
+    : onToday
+      ? "Aucune réunion dans les 7 prochains jours."
+      : dayOffset < 0
+        ? "Aucune réunion enregistrée ce jour-là."
+        : "Aucune réunion ce jour-là.";
 
   return (
     <main className="app md-panel">
       {view === "main" ? (
         <div className="view">
-          <header className="md-header">
-            <span className="md-caps is-date">{longDate(now)}</span>
-            <span className="md-header-count">
-              {todayCount === 0 ? "Journée libre" : `${todayCount} réunion${todayCount > 1 ? "s" : ""}`}
-            </span>
-          </header>
+          <DayNav
+            label={longDate(shown.getTime())}
+            today={onToday}
+            onPrev={dayOffset > -DAYS_BACK ? () => setDayOffset(dayOffset - 1) : undefined}
+            onNext={dayOffset < DAYS_AHEAD ? () => setDayOffset(dayOffset + 1) : undefined}
+          >
+            {onToday ? (
+              todayCount === 0 ? (
+                "Journée libre"
+              ) : (
+                `${todayCount} réunion${todayCount > 1 ? "s" : ""}`
+              )
+            ) : (
+              <Button small onClick={() => setDayOffset(0)}>
+                Aujourd'hui
+              </Button>
+            )}
+          </DayNav>
 
           <div className="agenda">
-            {groups.length === 0 && (
-              <p className="empty">
-                {icsUrl.trim()
-                  ? "Aucune réunion dans les 7 prochains jours."
-                  : "Ajoute le lien ICS de ton calendrier dans les réglages pour voir tes réunions ici et sur la barre."}
-              </p>
-            )}
+            {groups.length === 0 && <p className="empty">{emptyText}</p>}
             {groups.map((group) => (
               <section key={group.key}>
-                {group.key !== today && <div className="md-caps md-group-title">{groupTitle(group.first, now)}</div>}
-                {group.rows.filter((meeting) => isBeforeCurrent(meeting, group.key)).map(row)}
-                {current && line && group.key === currentDay && (
+                {onToday && group.key !== today && (
+                  <div className="md-caps md-group-title">{groupTitle(new Date(group.first).toISOString(), now)}</div>
+                )}
+                {group.rows.filter((item) => isBeforeCurrent(item, group.key)).map(row)}
+                {current && line && currentShown && group.key === currentDay && (
                   <NowRow
                     subject={current.subject}
                     time={`${hhmm(current.start)} – ${hhmm(current.end)}${current.show_as === "tentative" ? " · provisoire" : ""}`}
@@ -291,9 +382,10 @@ function App() {
                     {line.canSkip && <IconPill icon="skip" label="Ignorer" onClick={() => void act(skipMeeting)} />}
                   </NowRow>
                 )}
-                {group.rows.filter((meeting) => !isBeforeCurrent(meeting, group.key)).map(row)}
+                {group.rows.filter((item) => !isBeforeCurrent(item, group.key)).map(row)}
               </section>
             ))}
+            {summary && <div className="md-day-summary">{summary}</div>}
           </div>
 
           <footer className="md-footer">

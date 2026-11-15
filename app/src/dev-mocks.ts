@@ -56,6 +56,25 @@ export function installMocks() {
         return { phase: current ? phase : "none", meeting: current ?? null, dismissed: phase === "upcoming" ? { d1: "done", d2: "skipped" } : {} };
       case "get_meetings":
         return current ? [...earlier, current, ...later] : [];
+      case "get_history": {
+        if (!current) return [];
+        const entry = (id: string, subject: string, startIn: number, planned: number, actual: number | null) => ({
+          id,
+          subject,
+          start: minutes(startIn),
+          planned_secs: planned * 60,
+          state: actual === null ? "skipped" : "done",
+          started_at: actual === null ? null : minutes(startIn + 1),
+          ended_at: actual === null ? null : minutes(startIn + 1 + actual),
+        });
+        return [
+          entry("h1", "Revue de sprint", -3 * 1440 - 240, 60, 72),
+          entry("h2", "Standup équipe", -3 * 1440 - 480, 15, 16),
+          entry("h3", "Point individuel", -3 * 1440 - 90, 30, null),
+          entry("d1", "Standup équipe", -200, 15, 14),
+          entry("d2", "Déjeuner d'équipe", -90, 60, null),
+        ];
+      }
       case "get_autostart":
         return false;
       case "test_connection":

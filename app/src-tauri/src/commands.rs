@@ -310,7 +310,7 @@ pub async fn skip_meeting(app: AppHandle) -> Result<(), String> {
         let mut current = state.meeting_state.lock().expect("meeting state poisoned");
         match &*current {
             MeetingState::Armed { meeting } => {
-                state.dismiss(&meeting.id, "skipped");
+                state.record_skipped(meeting);
                 *current = MeetingState::Idle;
             }
             MeetingState::Idle => {
@@ -320,7 +320,7 @@ pub async fn skip_meeting(app: AppHandle) -> Result<(), String> {
                     .filter(|meeting| meeting.start > now)
                     .min_by_key(|meeting| meeting.start);
                 match next {
-                    Some(meeting) => state.dismiss(&meeting.id, "skipped"),
+                    Some(meeting) => state.record_skipped(&meeting),
                     None => return Err("No meeting to skip".to_string()),
                 }
             }
@@ -338,13 +338,19 @@ pub async fn end_meeting(app: AppHandle) -> Result<(), String> {
     {
         let state = app.state::<AppState>();
         let mut current = state.meeting_state.lock().expect("meeting state poisoned");
+        let now = Utc::now();
         match &*current {
-            MeetingState::InMeeting { meeting, .. } | MeetingState::Overrun { meeting, .. } => {
-                state.dismiss(&meeting.id, "done");
-                *current = MeetingState::Idle;
-            }
+            // Ended by hand: the real length runs from the start to now.
+            MeetingState::InMeeting {
+                meeting,
+                started_at,
+                ..
+            } => state.record_done(meeting, *started_at, now),
+            // Already recorded when it reached its scheduled end: only the end moves.
+            MeetingState::Overrun { meeting, .. } => state.close_done(&meeting.id, now),
             _ => return Err("No meeting in progress".to_string()),
         }
+        *current = MeetingState::Idle;
     }
     crate::scheduler::tick(&app).await;
     Ok(())
@@ -356,6 +362,12 @@ pub async fn resume_meeting(app: AppHandle, id: String) -> Result<(), String> {
     app.state::<AppState>().resume_meeting(&id);
     crate::scheduler::tick(&app).await;
     Ok(())
+}
+
+/// The local history: meetings held or skipped over the last 30 days.
+#[tauri::command]
+pub fn get_history(app: AppHandle) -> Vec<crate::history::Entry> {
+    app.state::<AppState>().history_entries()
 }
 
 #[tauri::command]

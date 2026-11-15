@@ -332,7 +332,7 @@ pub async fn tick(app: &tauri::AppHandle) {
             };
             // The meeting took place: it must not be offered again, which matters
             // when it was started ahead of its scheduled time.
-            state.dismiss(&meeting.id, "done");
+            state.record_done(&meeting, started_at, end);
             if let Some(snap) = snapshot {
                 if let Ok(client) = BusyBarClient::new(&state.base_url()) {
                     let _guard = state.draw_lock.lock().await;

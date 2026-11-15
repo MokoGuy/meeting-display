@@ -6,7 +6,7 @@ import "./tokens.css";
 import "./components.css";
 
 // ---------- icons
-type IconName = "settings" | "back" | "chevron" | "eye" | "resume" | "skip" | "auto" | "light" | "dark";
+type IconName = "settings" | "back" | "chevron" | "eye" | "resume" | "skip" | "prev" | "next" | "auto" | "light" | "dark";
 const ICON_PATHS: Record<IconName, ReactNode> = {
   settings: (
     <>
@@ -22,6 +22,8 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
       <path d="M20 5v14" />
     </>
   ),
+  prev: <path d="M15 6l-6 6 6 6" />,
+  next: <path d="M9 6l6 6-6 6" />,
   resume: (
     <>
       <path d="M9 14l-4 -4l4 -4" />
@@ -58,9 +60,23 @@ export function Icon({ name }: { name: IconName }) {
 }
 
 // ---------- actions
-export function Button({ primary, onClick, children }: { primary?: boolean; onClick: () => void; children: ReactNode }) {
+export function Button({
+  primary,
+  small,
+  onClick,
+  children,
+}: {
+  primary?: boolean;
+  small?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
   return (
-    <button type="button" className={`md-button${primary ? " is-primary" : ""}`} onClick={onClick}>
+    <button
+      type="button"
+      className={`md-button${primary ? " is-primary" : ""}${small ? " is-small" : ""}`}
+      onClick={onClick}
+    >
       {children}
     </button>
   );
@@ -260,21 +276,27 @@ export function MeetingRow({
   time,
   subject,
   state = "upcoming",
+  detail,
   onResume,
 }: {
   time: string;
   subject: string;
   state?: RowState;
+  /** A second line under the subject: planned and actual length of a meeting that was held. */
+  detail?: ReactNode;
   onResume?: () => void;
 }) {
   const setAside = state === "done" || state === "skipped";
   return (
-    <div className={`md-row${state === "upcoming" ? "" : ` is-${state}`}`}>
+    <div className={`md-row${state === "upcoming" ? "" : ` is-${state}`}${detail ? " has-detail" : ""}`}>
       <span className="md-row-bar" />
       <span className="md-row-time">{time}</span>
-      <span className="md-row-subject">
-        {subject}
-        {ROW_SUFFIX[state]}
+      <span className="md-row-main">
+        <span className="md-row-subject">
+          {subject}
+          {ROW_SUFFIX[state]}
+        </span>
+        {detail && <span className="md-row-detail">{detail}</span>}
       </span>
       {setAside && onResume ? (
         <button type="button" className="md-row-action" aria-label="Reprendre cette réunion" data-tip="Reprendre" onClick={onResume}>
@@ -284,6 +306,34 @@ export function MeetingRow({
         <span />
       )}
     </div>
+  );
+}
+
+/** The panel header: the day on screen, arrows to change it, and whatever sits on the right. */
+export function DayNav({
+  label,
+  today,
+  onPrev,
+  onNext,
+  children,
+}: {
+  label: string;
+  today: boolean;
+  onPrev?: () => void;
+  onNext?: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <header className="md-daynav">
+      <button type="button" className="md-nav-button" aria-label="Jour précédent" data-tip="Jour précédent" disabled={!onPrev} onClick={onPrev}>
+        <Icon name="prev" />
+      </button>
+      <span className={`md-caps${today ? " is-date" : ""}`}>{label}</span>
+      <button type="button" className="md-nav-button" aria-label="Jour suivant" data-tip="Jour suivant" disabled={!onNext} onClick={onNext}>
+        <Icon name="next" />
+      </button>
+      <span className="md-daynav-side">{children}</span>
+    </header>
   );
 }
 

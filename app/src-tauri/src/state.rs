@@ -25,7 +25,8 @@ pub struct AppState {
     pub discreet_mode: Mutex<bool>,
     pub auto_start: Mutex<bool>,
     /// Meetings the user skipped or ended by hand: ignored until the app restarts.
-    pub dismissed: Mutex<HashMap<String, &'static str>>,
+    /// What the user did with their meetings (held or skipped), saved on disk.
+    pub history: Mutex<crate::history::History>,
     /// What the scheduler last drew on the bar, and when (None = nothing of ours on screen).
     pub last_screen: Mutex<Option<crate::scheduler::Drawn>>,
     /// Whether our assets (icon and sounds) have been stored on the bar since the last failure.
@@ -72,7 +73,7 @@ impl AppState {
             quiet_hours_end: Mutex::new(quiet_hours_end),
             discreet_mode: Mutex::new(discreet_mode),
             auto_start: Mutex::new(auto_start),
-            dismissed: Mutex::new(HashMap::new()),
+            history: Mutex::new(crate::history::History::default()),
             last_screen: Mutex::new(None),
             icon_uploaded: AtomicBool::new(false),
         }
@@ -124,39 +125,70 @@ impl AppState {
             .clone()
     }
 
-    /// Known meetings minus the ones the user dismissed.
+    /// Reads the saved history; called once at startup.
+    pub fn load_history(&self, path: std::path::PathBuf) {
+        *self.history.lock().expect("history state poisoned") =
+            crate::history::History::load(path, chrono::Utc::now());
+    }
+
+    /// Known meetings minus the ones already held or skipped.
     pub fn visible_meetings(&self) -> Vec<Meeting> {
-        let dismissed = self.dismissed.lock().expect("dismissed state poisoned");
+        let history = self.history.lock().expect("history state poisoned");
         self.meetings()
             .into_iter()
-            .filter(|meeting| !dismissed.contains_key(&meeting.id))
+            .filter(|meeting| !history.contains(&meeting.id))
             .collect()
     }
 
-    /// Meetings set aside by the user, with how: "done" (started then ended)
-    /// or "skipped" (ignored without being started).
+    /// Meeting id to "done" or "skipped", for the meetings set aside by the user.
     pub fn dismissed_map(&self) -> HashMap<String, String> {
-        self.dismissed
+        self.history
             .lock()
-            .expect("dismissed state poisoned")
-            .iter()
-            .map(|(id, kind)| (id.clone(), kind.to_string()))
-            .collect()
+            .expect("history state poisoned")
+            .states()
+    }
+
+    /// Every recorded meeting of the last 30 days, oldest first.
+    pub fn history_entries(&self) -> Vec<crate::history::Entry> {
+        let mut history = self.history.lock().expect("history state poisoned");
+        history.prune(chrono::Utc::now());
+        history.entries()
     }
 
     /// Puts one meeting back in play.
     pub fn resume_meeting(&self, meeting_id: &str) {
-        self.dismissed
+        self.history
             .lock()
-            .expect("dismissed state poisoned")
+            .expect("history state poisoned")
             .remove(meeting_id);
     }
 
-    pub fn dismiss(&self, meeting_id: &str, kind: &'static str) {
-        self.dismissed
+    pub fn record_skipped(&self, meeting: &Meeting) {
+        self.history
             .lock()
-            .expect("dismissed state poisoned")
-            .insert(meeting_id.to_string(), kind);
+            .expect("history state poisoned")
+            .record(crate::history::Entry::skipped(meeting), chrono::Utc::now());
+    }
+
+    /// A meeting that was held, from when it was started to when it ended.
+    pub fn record_done(
+        &self,
+        meeting: &Meeting,
+        started_at: chrono::DateTime<chrono::Utc>,
+        ended_at: chrono::DateTime<chrono::Utc>,
+    ) {
+        self.history.lock().expect("history state poisoned").record(
+            crate::history::Entry::done(meeting, started_at, ended_at),
+            chrono::Utc::now(),
+        );
+    }
+
+    /// The user ended an overrunning meeting: its real end is now.
+    pub fn close_done(&self, meeting_id: &str, ended_at: chrono::DateTime<chrono::Utc>) {
+        self.history
+            .lock()
+            .expect("history state poisoned")
+            .close(meeting_id, ended_at);
     }
 
     pub fn set_meetings(&self, meetings: Vec<Meeting>) {

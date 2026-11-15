@@ -1,6 +1,7 @@
 pub mod busybar;
 mod calendar;
 mod commands;
+mod history;
 mod logging;
 mod meeting_state;
 mod poller;
@@ -38,6 +39,10 @@ pub fn run() {
                 settings.discreet_mode,
                 settings.auto_start,
             ));
+            if let Ok(dir) = app.path().app_data_dir() {
+                app.state::<state::AppState>()
+                    .load_history(dir.join("history.json"));
+            }
             tray::build(app, "Meeting Display — connexion…")?;
             if let Some(window) = app.get_webview_window("main") {
                 let app_handle = app.handle().clone();
@@ -91,7 +96,8 @@ pub fn run() {
             commands::start_meeting_now,
             commands::skip_meeting,
             commands::end_meeting,
-            commands::resume_meeting
+            commands::resume_meeting,
+            commands::get_history
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
