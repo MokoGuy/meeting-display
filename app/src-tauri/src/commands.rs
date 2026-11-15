@@ -283,6 +283,8 @@ pub async fn start_meeting_now(app: AppHandle) -> Result<(), String> {
                 }
             }
         };
+        // Started ahead of time: the planned length runs from now, not until the scheduled end.
+        let meeting = crate::meeting_state::started_now(meeting, now);
         *state.meeting_state.lock().expect("meeting state poisoned") = MeetingState::InMeeting {
             end: meeting.end,
             meeting,

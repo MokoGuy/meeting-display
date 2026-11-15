@@ -63,6 +63,17 @@ pub fn restore_snapshot(saved: &Value, now: DateTime<Utc>, started_at: DateTime<
     restored
 }
 
+/// A meeting started ahead of time keeps its planned length, counted from
+/// the moment it is started. A meeting already under way is left as it is.
+pub fn started_now(mut meeting: Meeting, now: DateTime<Utc>) -> Meeting {
+    if meeting.start > now {
+        let planned = meeting.end - meeting.start;
+        meeting.start = now;
+        meeting.end = now + planned;
+    }
+    meeting
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,6 +94,19 @@ mod tests {
             is_cancelled: false,
             is_all_day: false,
         }
+    }
+
+    #[test]
+    fn early_start_keeps_the_planned_length() {
+        let m = meeting(); // 10:00 to 10:30
+        let now = m.start - chrono::Duration::hours(17);
+        let started = started_now(m.clone(), now);
+        assert_eq!(started.start, now);
+        assert_eq!(started.end, now + chrono::Duration::minutes(30));
+        assert_eq!(started.id, m.id);
+        // Already under way: the scheduled end stands.
+        let late = m.start + chrono::Duration::minutes(5);
+        assert_eq!(started_now(m.clone(), late), m);
     }
 
     #[test]
