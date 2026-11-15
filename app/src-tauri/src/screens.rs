@@ -211,7 +211,7 @@ fn back_line(id: &str, value: String, font: &str, y: i32) -> DrawElement {
 /// Builds the draw request for one screen.
 ///
 /// `badge` is the small number shown inside the calendar icon (the scheduler
-/// passes the number of meetings left that day).
+/// passes the day of the month of the meeting).
 pub fn build(kind: ScreenKind, meeting: &Meeting, now: DateTime<Utc>, badge: u32) -> DrawRequest {
     let start = meeting.start.with_timezone(&Local);
     let end = meeting.end.with_timezone(&Local);

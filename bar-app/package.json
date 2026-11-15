@@ -1,7 +1,7 @@
 {
   "name": "meeting-display-bar-app",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "On-bar companion of Meeting Display",
   "author": "MokoGuy",
   "type": "module",

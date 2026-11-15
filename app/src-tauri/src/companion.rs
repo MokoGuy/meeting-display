@@ -118,7 +118,7 @@ pub fn build_agenda(
             "s": meeting.start.timestamp(),
             "e": meeting.end.timestamp(),
             "phase": phase,
-            "badge": badge_for(visible, meeting, now),
+            "badge": badge_for(meeting),
             "tent": meeting.show_as == "tentative",
             "today": is_today,
         })

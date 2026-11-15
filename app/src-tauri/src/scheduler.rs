@@ -4,7 +4,7 @@ use crate::meeting_state::{restore_snapshot, MeetingState};
 use crate::screens::{self, ScreenKind, APP};
 use crate::state::AppState;
 use chrono::NaiveTime;
-use chrono::{DateTime, Duration, Local, Utc};
+use chrono::{DateTime, Datelike, Duration, Local, Utc};
 use std::sync::atomic::Ordering;
 use std::time::Instant;
 use tauri::Manager;
@@ -177,14 +177,10 @@ pub fn plan(current: &MeetingState, meetings: &[Meeting], now: DateTime<Utc>) ->
     }
 }
 
-/// Number shown in the calendar icon: meetings not yet finished on the same
-/// local day as `meeting` (the published ICS carries no attendee list).
-pub fn badge_for(meetings: &[Meeting], meeting: &Meeting, now: DateTime<Utc>) -> u32 {
-    let day = meeting.start.with_timezone(&Local).date_naive();
-    meetings
-        .iter()
-        .filter(|m| m.end > now && m.start.with_timezone(&Local).date_naive() == day)
-        .count() as u32
+/// Number shown in the calendar icon: the day of the month the meeting starts
+/// on, local time, like a desk calendar turned to that day.
+pub fn badge_for(meeting: &Meeting) -> u32 {
+    meeting.start.with_timezone(&Local).day()
 }
 
 /// Chooses what to show once the state machine has spoken: the active meeting
@@ -429,7 +425,7 @@ pub async fn tick(app: &tauri::AppHandle) {
         None
     } else {
         pick_view(active, &meetings, now).map(|(kind, meeting)| {
-            let badge = badge_for(&meetings, &meeting, now);
+            let badge = badge_for(&meeting);
             (kind, screens::build(kind, &meeting, now, badge))
         })
     };
@@ -525,17 +521,13 @@ mod tests {
     }
 
     #[test]
-    fn badge_counts_unfinished_meetings_of_that_day() {
-        let now = DateTime::parse_from_rfc3339("2030-01-01T10:00:00Z")
+    fn badge_is_the_day_of_the_month_of_the_meeting() {
+        // Noon UTC is the same calendar day in every time zone within twelve hours of it.
+        let start = DateTime::parse_from_rfc3339("2030-01-16T12:00:00Z")
             .unwrap()
             .with_timezone(&Utc);
-        let done = meeting(now - Duration::hours(2));
-        let next = meeting(now + Duration::minutes(30));
-        let later = meeting(now + Duration::minutes(90));
-        let other_day = meeting(now + Duration::days(3));
-        let all = [done, next.clone(), later, other_day.clone()];
-        assert_eq!(badge_for(&all, &next, now), 2);
-        assert_eq!(badge_for(&all, &other_day, now), 1);
+        assert_eq!(badge_for(&meeting(start)), 16);
+        assert_eq!(badge_for(&meeting(start + Duration::days(3))), 19);
     }
 
     #[test]

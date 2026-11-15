@@ -28,7 +28,7 @@ Publier un calendrier, « Tous les détails », lien ICS. Il n'est stocké que d
 | Réunion validée | « LIVE » et temps restant | aucun |
 | Fin prévue d'une réunion validée | « + mm:ss » en orange, 30 min au plus | carillon |
 
-Le chiffre dans l'icône calendrier est le nombre de réunions restantes ce jour-là.
+Le chiffre dans l'icône calendrier est le jour du mois de la réunion affichée, comme un calendrier de bureau.
 L'écran arrière de la barre affiche l'état, le sujet complet et un détail.
 
 ## Le panneau

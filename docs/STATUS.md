@@ -1,4 +1,4 @@
-# État du projet — Meeting Display 0.5.0 (15 novembre 2026)
+# État du projet — Meeting Display 0.5.1 (15 novembre 2026)
 
 Ce document ne retient comme acquis que ce qui a été vérifié, avec la preuve. Les anciennes
 mentions « validé » de septembre 2026 venaient d'agents, pas de l'utilisateur, et ne sont pas reprises.
@@ -78,7 +78,7 @@ pointe l'app installée sur un calendrier de test, puis remet les réglages d'or
 - **Les touches ont été simulées**, pas pressées : la vraie molette et les vrais boutons restent à essayer.
 - **Pas de lien de visioconférence ni de participants.** Le calendrier publié par Outlook ne
   contient ni description ni participants : pas de bouton « rejoindre », et le chiffre de l'icône
-  est le nombre de réunions restantes du jour, pas le nombre d'invités.
+  est le jour du mois de la réunion, pas le nombre d'invités.
 - **Les réunions refusées** ne sont écartées que parce qu'Outlook les publie comme créneaux libres.
 - **« En réunion » est dessiné par l'app** : la barre ne passe pas en état BUSY.
 - **Les touches `busy`, `custom`, `off`, `apps`** de l'API déplacent le sélecteur de mode de la
