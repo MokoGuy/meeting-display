@@ -1,4 +1,4 @@
-# État du projet — Meeting Display 0.5.4 (15 novembre 2026)
+# État du projet — Meeting Display 0.5.5 (15 novembre 2026)
 
 Ce document ne retient comme acquis que ce qui a été vérifié, avec la preuve. Les anciennes
 mentions « validé » de septembre 2026 venaient d'agents, pas de l'utilisateur, et ne sont pas reprises.
@@ -42,6 +42,7 @@ option de démarrage automatique des réunions, mise à jour automatique. Le gui
 | App embarquée : molette et boutons | app installée sur la barre, calendrier de test, touches simulées par l'API | défilement des réunions, retour par OK, Start démarre puis termine, Back ignore, Start reprend ; chaque action reçue par l'app Windows et inscrite dans l'historique |
 | App embarquée : molette sur plusieurs jours | app installée sur la barre, agenda fictif sur quatre jours, touches simulées | un cran par réunion, butée en fin de liste, réunion d'un autre jour avec son jour dans l'icône, « faite » et « ignoree » affichés, Start reprend une réunion ignorée d'un jour à venir |
 | App embarquée : transitions animées | app installée sur la barre, agenda fictif, touches simulées, captures d'écran en rafale | molette : la nouvelle carte arrive sous un rideau noir qui se lève, jamais visible avant lui (16 crans mesurés) ; action : la flèche orange amène le mot puis découvre l'écran suivant, sans trou d'affichage. La fluidité elle-même (60 images par seconde) n'est pas mesurable par capture : jugée à l'œil sur la barre |
+| Mise à jour de la barre par l'app Windows | app Windows 0.5.5 installée sur un poste dont la barre avait l'app embarquée 0.5.4 | la barre est passée en 0.5.5 en moins de 5 secondes après le lancement, et l'app embarquée tournait ensuite (battement actif). Non essayé : une barre sans l'app, une barre rebranchée en cours de route, une installation qui échoue |
 | Lancement de l'app embarquée | démarrage de l'app Windows | l'app embarquée est lancée et reçoit l'agenda |
 | Calendrier de test | `node tools/test-calendar.mjs --scenario day` relu par le code de l'app | 6 réunions gardées, 3 écartées comme prévu |
 
@@ -74,8 +75,8 @@ pointe l'app installée sur un calendrier de test, puis remet les réglages d'or
 
 - **La molette et les boutons demandent l'app embarquée** (`bar-app/`), parce que l'API de la barre
   ne signale pas les appuis à un programme sur PC. Elle remplace l'horloge tant qu'elle est ouverte.
-- **L'app embarquée n'est pas installée par l'app Windows** : il faut la compiler et l'installer à la
-  main, depuis PowerShell.
+- **L'app Windows installe l'app embarquée sans demander**, y compris sur une barre qui ne l'a
+  jamais eue ; il n'y a pas de réglage pour l'en empêcher.
 - **Les touches ont été simulées**, pas pressées : la vraie molette et les vrais boutons restent à essayer.
 - **Pas de lien de visioconférence ni de participants.** Le calendrier publié par Outlook ne
   contient ni description ni participants : pas de bouton « rejoindre », et le chiffre de l'icône

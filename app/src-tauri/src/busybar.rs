@@ -316,6 +316,50 @@ impl BusyBarClient {
     }
 
     /// Starts an installed JavaScript app on the bar.
+    /// Installs a JavaScript app from its package, replacing any version already there: the
+    /// package is uploaded, then confirmed with the key the bar hands back. Takes a few seconds.
+    pub async fn install_app(&self, package: &[u8]) -> Result<(), Error> {
+        let patient = std::time::Duration::from_secs(90);
+        let staged = self
+            .http
+            .post(self.endpoint("/api/apps/stage"))
+            .header("Content-Type", "application/octet-stream")
+            .timeout(patient)
+            .body(package.to_vec())
+            .send()
+            .await
+            .map_err(|error| Error::Unreachable(error.to_string()))?;
+        let status = staged.status();
+        let body = staged.text().await.unwrap_or_default();
+        if !status.is_success() {
+            return Err(Error::Http {
+                status: status.as_u16(),
+                message: error_message(&body),
+            });
+        }
+        let key = serde_json::from_str::<Value>(&body)
+            .ok()
+            .and_then(|value| value.get("install_key")?.as_i64())
+            .ok_or_else(|| Error::Decode("no install key in the bar's answer".to_string()))?;
+        let installed = self
+            .http
+            .post(self.endpoint("/api/apps/install"))
+            .query(&[("install_key", key.to_string())])
+            .timeout(patient)
+            .send()
+            .await
+            .map_err(|error| Error::Unreachable(error.to_string()))?;
+        let status = installed.status();
+        if !status.is_success() {
+            let body = installed.text().await.unwrap_or_default();
+            return Err(Error::Http {
+                status: status.as_u16(),
+                message: error_message(&body),
+            });
+        }
+        Ok(())
+    }
+
     pub async fn launch_app(&self, app_id: &str) -> Result<(), Error> {
         let response = self
             .http

@@ -12,6 +12,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { bundleProblem } from "./bundle-bar-app.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const app = join(root, "app");
@@ -27,6 +28,13 @@ if (!env.TAURI_SIGNING_PRIVATE_KEY) {
     process.exit(1);
   }
   env.TAURI_SIGNING_PRIVATE_KEY = readFileSync(keyFile, "utf8").trim();
+}
+
+// The Windows app installs the on-bar app it carries: both must be the same version.
+const problem = bundleProblem();
+if (problem) {
+  console.error(`App de la barre non embarquée correctement : ${problem}.\nDans bar-app (PowerShell) : npm run build, puis node tools/bundle-bar-app.mjs`);
+  process.exit(1);
 }
 
 console.log(`Build de Meeting Display ${version}…`);

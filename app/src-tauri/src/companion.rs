@@ -27,6 +27,10 @@ const AGENDA: &str = "/ext/apps_data/js_apps/meeting-display/agenda.json";
 const ACTIONS: &str = "/ext/apps_data/js_apps/meeting-display/actions.txt";
 /// The manifest the bar keeps for the installed companion app, with its version.
 pub const MANIFEST: &str = "/ext/user_assets/meeting-display/appmeta/manifest.json";
+/// The on-bar app, carried inside this one (see tools/bundle-bar-app.mjs). The release tool
+/// refuses to publish unless the package holds exactly this app's version.
+const PACKAGE: &[u8] = include_bytes!("../assets/bar-app.tgz");
+const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 const ALIVE: &str = "/ext/apps_data/js_apps/meeting-display/alive.txt";
 
 /// The companion rewrites its heartbeat every 20 s: silent for longer than
@@ -48,6 +52,8 @@ pub struct Link {
     last_agenda: String,
     /// Screen the companion is showing, to play the entry sounds here.
     pub last_kind: Option<crate::screens::ScreenKind>,
+    /// The bar's copy of the on-bar app has been compared with ours since the bar last answered.
+    bar_app_checked: bool,
 }
 
 impl Link {
@@ -75,6 +81,66 @@ impl Link {
     pub fn is_alive(&self, now: Instant) -> bool {
         self.alive_seen_at
             .is_some_and(|seen| now.duration_since(seen) < ALIVE_FOR)
+    }
+}
+
+/// "1.2.3" as numbers; anything else is not a version we can compare.
+fn parse_version(text: &str) -> Option<(u32, u32, u32)> {
+    let mut parts = text.trim().split('.').map(|part| part.parse::<u32>().ok());
+    let version = (parts.next()??, parts.next()??, parts.next()??);
+    parts.next().is_none().then_some(version)
+}
+
+/// Whether the bar needs our package: it has no on-bar app, or an older one. A newer or
+/// unreadable version is left alone, so a copy installed by hand is never downgraded.
+pub fn needs_install(on_bar: Option<&str>, ours: &str) -> bool {
+    match (on_bar.map(parse_version), parse_version(ours)) {
+        (None, Some(_)) => true,
+        (Some(Some(theirs)), Some(ours)) => theirs < ours,
+        _ => false,
+    }
+}
+
+/// Brings the bar's on-bar app up to the version carried by this app, then starts it. Runs
+/// once each time the bar starts answering, and never while a meeting is on screen: the
+/// install stops whatever the bar is showing for a few seconds.
+async fn ensure_bar_app(state: &AppState, client: &BusyBarClient) {
+    let idle = matches!(
+        *state.meeting_state.lock().expect("meeting state poisoned"),
+        MeetingState::Idle
+    );
+    if !idle {
+        return;
+    }
+    // Ok(None): the bar answered and has no such file. Err: the bar did not answer; try later.
+    let Ok(manifest) = client.storage_read(MANIFEST).await else {
+        return;
+    };
+    let on_bar = manifest.and_then(|text| {
+        serde_json::from_str::<Value>(&text)
+            .ok()?
+            .get("version")?
+            .as_str()
+            .map(str::to_string)
+    });
+    state
+        .companion
+        .lock()
+        .expect("companion state poisoned")
+        .bar_app_checked = true;
+    if !needs_install(on_bar.as_deref(), PACKAGE_VERSION) {
+        return;
+    }
+    let installed = client.install_app(PACKAGE).await;
+    tracing::info!(
+        companion = "install",
+        from = on_bar.as_deref().unwrap_or("none"),
+        to = PACKAGE_VERSION,
+        ok = installed.is_ok()
+    );
+    if installed.is_ok() {
+        let launched = client.launch_app(APP_ID).await.is_ok();
+        tracing::info!(companion = "launch", launched);
     }
 }
 
@@ -292,9 +358,28 @@ pub async fn sync(app: &tauri::AppHandle) -> bool {
     let Ok(client) = BusyBarClient::new(&state.base_url()) else {
         return false;
     };
-    // A missing heartbeat file means the companion is not installed or never
-    // ran: nothing else to do, and no error to report.
-    let alive = client.storage_read(ALIVE).await.ok().flatten();
+    let checked = state
+        .companion
+        .lock()
+        .expect("companion state poisoned")
+        .bar_app_checked;
+    if !checked {
+        ensure_bar_app(&state, &client).await;
+    }
+    // A missing heartbeat file means the companion never ran: nothing else to do, and no
+    // error to report. A bar that does not answer gets its on-bar app checked again when
+    // it comes back: it may be another bar, or the same one after a reset.
+    let alive = match client.storage_read(ALIVE).await {
+        Ok(alive) => alive,
+        Err(_) => {
+            state
+                .companion
+                .lock()
+                .expect("companion state poisoned")
+                .bar_app_checked = false;
+            None
+        }
+    };
     let installed = alive.is_some();
     let active = state
         .companion
@@ -480,6 +565,17 @@ mod tests {
             build_agenda(&MeetingState::Idle, &[], &[], now)["seq"],
             empty["seq"]
         );
+    }
+
+    #[test]
+    fn installs_only_when_the_bar_is_behind() {
+        assert!(needs_install(None, "0.5.5"));
+        assert!(needs_install(Some("0.5.4"), "0.5.5"));
+        assert!(needs_install(Some("0.5.9"), "0.5.10"));
+        assert!(!needs_install(Some("0.5.5"), "0.5.5"));
+        // Newer on the bar (installed by hand), or not a version at all: left alone.
+        assert!(!needs_install(Some("0.6.0"), "0.5.5"));
+        assert!(!needs_install(Some("dev"), "0.5.5"));
     }
 
     #[test]

@@ -37,9 +37,9 @@ No account, no cloud, no browser extension. One calendar link, one USB cable.
 | Back | skip the selected meeting |
 | OK | return to the current meeting |
 
-The wheel and buttons need the small companion app that runs on the bar itself: see
-[`bar-app/README.md`](bar-app/README.md). Without it, the display works the same and you drive
-everything from the panel.
+The wheel and buttons are handled by a small companion app that runs on the bar itself.
+Meeting Display installs it on the bar for you and keeps it up to date: see
+[`bar-app/README.md`](bar-app/README.md).
 
 ## On your PC
 

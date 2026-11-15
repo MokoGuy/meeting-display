@@ -48,6 +48,19 @@ et réinstaller l'app.
 
 ## Installer sur la barre
 
+Il n'y a rien à faire : **l'app Windows transporte l'app embarquée et l'installe elle-même**.
+À chaque fois que la barre se met à répondre (démarrage de l'app Windows, barre rebranchée), elle
+compare la version présente sur la barre avec celle qu'elle transporte. Si la barre n'a pas l'app,
+ou en a une plus ancienne, elle l'installe puis la lance ; cela prend quelques secondes. Elle ne
+le fait jamais pendant une réunion, et ne remplace jamais une version plus récente que la sienne.
+
+Une mise à jour de l'app Windows met donc aussi à jour la barre, sans geste de ta part.
+
+Pour retirer l'app embarquée : `npm run app:uninstall` dans ce dossier. L'app Windows la
+réinstallera à son prochain démarrage ; il n'y a pas encore de réglage pour l'en empêcher.
+
+### Pour développer
+
 Barre branchée en USB, depuis **PowerShell** (pas Git Bash : l'étape d'archivage y échoue) :
 
 ```powershell
@@ -57,8 +70,9 @@ npm run build
 npm run app:install
 ```
 
-L'app Windows lance ensuite l'app embarquée à chaque démarrage. Pour la retirer :
-`npm run app:uninstall` ; l'app Windows reprend alors l'affichage elle-même.
+Pour qu'une version de l'app Windows transporte ce que tu viens de construire :
+`node tools/bundle-bar-app.mjs` à la racine, qui copie le paquet dans
+`app/src-tauri/assets/bar-app.tgz` et vérifie que sa version est celle de l'app Windows.
 
 Une seule app tourne à la fois sur la barre : tant que celle-ci est ouverte, elle remplace
 l'horloge. Si tu ouvres une autre app ou changes de mode, l'app Windows reprend l'affichage

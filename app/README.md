@@ -63,7 +63,7 @@ Dans le pied du panneau, le bouton de thème alterne automatique (réglage de Wi
 
 ## Molette et boutons de la barre
 
-Avec l'app embarquée (dossier `bar-app/`, à installer une fois sur la barre), la molette passe
+Avec l'app embarquée (dossier `bar-app/`), que l'app Windows installe et met à jour elle-même sur la barre, la molette passe
 d'une réunion à la suivante ou à la précédente (aujourd'hui et les jours suivants) et les boutons Start et Back démarrent, terminent, ignorent ou
 reprennent une réunion directement sur la barre. Voir [`bar-app/README.md`](../bar-app/README.md).
 
@@ -103,17 +103,23 @@ remis en place à l'arrêt (Ctrl+C). Sans `--use`, le script affiche un lien
 
 ## Publier une version
 
-1. Changer la version dans `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `package.json`.
-2. Depuis un poste qui a la clé de signature : `node tools/release.mjs --publish` (clé lue dans
+1. Changer la version dans `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` et `package.json`,
+   ainsi que dans `bar-app/package.json` et `bar-app/src/appmeta/manifest.json` : les deux apps
+   portent le même numéro.
+2. Embarquer l'app de la barre : dans `bar-app`, depuis PowerShell, `npm run build` ; puis à la
+   racine `node tools/bundle-bar-app.mjs`. La publication refuse de partir si le paquet embarqué
+   n'est pas à la version de l'app Windows.
+3. Depuis un poste qui a la clé de signature : `node tools/release.mjs --publish` (clé lue dans
    `~/.tauri/meeting-display.key`, GitHub CLI connecté). Le script construit l'installeur, le signe
    et crée la release.
-3. Ou par GitHub Actions : copier `tools/release-workflow.yml` dans `.github/workflows/release.yml`
+4. Ou par GitHub Actions : copier `tools/release-workflow.yml` dans `.github/workflows/release.yml`
    (il faut un jeton GitHub avec le droit `workflow`), puis pousser un tag `v<version>`. Le secret
    `TAURI_SIGNING_PRIVATE_KEY` est déjà enregistré dans le dépôt.
 
 Les apps installées cherchent une mise à jour une minute après leur lancement puis toutes les six
 heures, et l'installent quand aucune réunion n'est à l'écran. L'adresse consultée est dans
-`plugins.updater.endpoints` de `tauri.conf.json`.
+`plugins.updater.endpoints` de `tauri.conf.json`. Une fois redémarrée, l'app mise à jour installe
+à son tour sur la barre l'app embarquée qu'elle transporte.
 
 ## Design system
 
