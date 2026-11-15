@@ -63,8 +63,8 @@ Dans le pied du panneau, le bouton de thème alterne automatique (réglage de Wi
 
 ## Molette et boutons de la barre
 
-Avec l'app embarquée (dossier `bar-app/`, à installer une fois sur la barre), la molette fait
-défiler les réunions du jour et les boutons Start et Back démarrent, terminent, ignorent ou
+Avec l'app embarquée (dossier `bar-app/`, à installer une fois sur la barre), la molette passe
+d'une réunion à la suivante ou à la précédente (aujourd'hui et les jours suivants) et les boutons Start et Back démarrent, terminent, ignorent ou
 reprennent une réunion directement sur la barre. Voir [`bar-app/README.md`](../bar-app/README.md).
 
 ## Paramètres

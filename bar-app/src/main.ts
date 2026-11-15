@@ -30,7 +30,6 @@ const COVER_MS = 170; // a curtain covers the screen about 250 ms after it is re
 
 const WHITE = "#FFFFFFFF";
 const DIM = "#FFFFFF90";
-const FAINT = "#FFFFFF55";
 const AMBER = "#FFB000FF";
 const RED = "#FF5050FF";
 const ORANGE = "#FFA500FF";
@@ -44,6 +43,11 @@ interface Item {
   t: string; // subject, ASCII
   hm: string; // "15:30"
   st: ItemState;
+  // Sent by Meeting Display 0.5.3 and later:
+  lbl?: string; // "15:30" today, "lun 12:30" another day
+  d?: number; // day of the month, for the calendar icon
+  s?: number; // start, epoch seconds
+  today?: boolean;
 }
 interface Cur {
   id: string;
@@ -67,7 +71,7 @@ interface Agenda {
 type El = Record<string, unknown> & { id: string };
 
 let agenda: Agenda = { seq: -1, cur: null, day: [] };
-let browse = -1; // index in agenda.day, or -1 when the wheel view is closed
+let browse = -1; // index in agenda.day of the meeting the wheel is on, or -1 when it is at rest
 let lastInput = 0;
 let flash = ""; // the action word on screen, or "" (it is an animation laid over everything else)
 let flashUntil = 0;
@@ -214,37 +218,39 @@ function meetingScreen(cur: Cur): { elements: El[]; led?: string } {
   return { elements, led: cur.tent ? undefined : led };
 }
 
-// ---------- the wheel view: the chosen meeting on top, the next one under it
-function barColor(item: Item, chosen: boolean): string {
-  if (item.st === "done") return GREEN;
-  if (item.st === "skip") return GREY;
-  return chosen ? ACCENT : GREY;
-}
-function browseScreen(day: Item[], index: number): { elements: El[] } {
-  const chosen = day[index];
-  const next = day[index + 1];
-  const set = chosen.st === "done" || chosen.st === "skip";
+// ---------- the wheel: one meeting per notch, on the same card as the meeting screens
+function browseScreen(day: Item[], index: number, cur: Cur | null): { elements: El[] } {
+  const item = day[index];
+  const set = item.st === "done" || item.st === "skip";
+  // A settled meeting shows the time alone: the icon already gives the day, and the weekday
+  // would run into the word on the right.
+  const when = set ? item.hm : item.lbl || item.hm;
   // Its own background id: the meeting screens use a gradient under "bg", and a gradient
   // replaced in place by a solid fill leaves a faint trace.
   const elements: El[] = [
     rect("list-bg", 0, 0, 72, 16, ["#000000FF"]),
-    rect("b1", 0, 1, 2, 6, [barColor(chosen, true)]),
-    text("t1", chosen.hm, "small", 4, -1, set ? DIM : WHITE),
-    text("s1", chosen.t, "small", 31, -1, set ? DIM : WHITE, { width: 41, ...SCROLL }),
+    { id: "ico", type: "image", display: "front", path: "images/calendar.png", x: 1, y: 1, align: "top_left", timeout: TIMEOUT_S },
+    text("badge", item.d ? String(item.d) : " ", "superscript", 8, 6, "#323232FF", { align: "top_mid" }),
+    text("title", item.t, "small", 18, 0, set ? DIM : WHITE, { align: "top_left", width: 51, ...SCROLL }),
+    text("bl", when, "small", 18, 8, DIM, { align: "top_left" }),
   ];
-  if (next) {
-    const nextSet = next.st === "done" || next.st === "skip";
-    elements.push(
-      rect("b2", 0, 10, 2, 6, [barColor(next, false)]),
-      text("t2", next.hm, "small", 4, 8, nextSet ? FAINT : DIM),
-      text("s2", next.t, "small", 31, 8, nextSet ? FAINT : DIM, { width: 41 }),
-    );
-  } else {
-    elements.push(text("t2", "fin de journee", "small", 4, 8, FAINT));
-  }
-  const state = chosen.st === "done" ? "realisee" : chosen.st === "skip" ? "ignoree" : chosen.st === "tent" ? "provisoire" : "a venir";
-  const hint = set ? "START pour reprendre" : "START demarrer - BACK ignorer";
-  elements.push(...back(`${index + 1}/${day.length} - ${state}`, chosen.t, hint));
+  // Bottom right: what has become of it, or how far away it is.
+  const running = !!cur && cur.id === item.id && (cur.phase === "live" || cur.phase === "overrun");
+  let state = "a venir";
+  let right = "";
+  let color = WHITE;
+  if (item.st === "done") [state, right, color] = ["realisee", "faite", GREEN];
+  else if (item.st === "skip") [state, right, color] = ["ignoree", "ignoree", GREY];
+  else if (running) [state, right, color] = ["en cours", "LIVE", GREEN];
+  else if (item.today && item.s) right = remaining(item.s - nowS());
+  if (item.st === "tent") state = "provisoire";
+  if (right) elements.push(text("br", right, "small", 70, 8, color, { align: "top_right" }));
+  // Right edge: where this meeting sits among the others.
+  const size = Math.max(2, Math.round(16 / day.length));
+  const top = day.length > 1 ? Math.round(((16 - size) * index) / (day.length - 1)) : 0;
+  elements.push(rect("pos-track", 71, 0, 1, 16, ["#FFFFFF20"]), rect("pos", 71, top, 1, size, [ACCENT]));
+  const hint = set ? "START pour reprendre" : running ? "START pour terminer" : "START demarrer - BACK ignorer";
+  elements.push(...back(`${index + 1}/${day.length} - ${state}`, item.t, hint));
   return { elements };
 }
 
@@ -281,7 +287,7 @@ function draw(): void {
 
 async function render(): Promise<void> {
   if (flash && Date.now() < flashUntil) return; // the word covers the screen
-  const screen = browse >= 0 && agenda.day[browse] ? browseScreen(agenda.day, browse) : agenda.cur ? meetingScreen(agenda.cur) : emptyScreen();
+  const screen = browse >= 0 && agenda.day[browse] ? browseScreen(agenda.day, browse, agenda.cur) : agenda.cur ? meetingScreen(agenda.cur) : emptyScreen();
   const led = "led" in screen ? (screen as { led?: string }).led : undefined;
   const signature = JSON.stringify(screen.elements) + (led ?? "");
   const word = flash;
@@ -393,16 +399,15 @@ function onBack(): void {
 function onWheel(delta: number): void {
   const count = agenda.day.length;
   if (count === 0) return;
-  if (browse < 0) {
-    // Open on the current meeting, or on the first one still to come.
-    let start = 0;
+  // At rest the bar shows the current meeting: the first notch already goes to its neighbour.
+  let from = browse;
+  if (from < 0) {
+    from = 0;
     for (let i = 0; i < count; i++) {
-      if (agenda.cur && agenda.day[i].id === agenda.cur.id) start = i;
+      if (agenda.cur && agenda.day[i].id === agenda.cur.id) from = i;
     }
-    browse = start;
-  } else {
-    browse = Math.min(count - 1, Math.max(0, browse + delta));
   }
+  browse = Math.min(count - 1, Math.max(0, from + delta));
   // The curtain travels the way the list moves: up towards later meetings.
   wheelFx = delta > 0 ? "wipe_up" : "wipe_down";
   draw();

@@ -16,8 +16,8 @@ No account, no cloud, no browser extension. One calendar link, one USB cable.
   15 minutes before, counts down the last 5, and tells you when it is time.
 - **Time left, not time of day.** Press Start when the meeting begins: the bar counts down to
   the end, then shows how far over you are.
-- **Hands on the bar, not on the mouse.** Turn the wheel to browse today's meetings, press
-  Start to begin one early, Back to skip it.
+- **Hands on the bar, not on the mouse.** Turn the wheel to step through your meetings, today
+  and the days after, press Start to begin one early, Back to skip it.
 - **A soft sound, never a beep.** A gentle note as a meeting approaches, a chime when its
   time is up. Quiet hours and a discreet mode silence everything.
 - **Your day, kept.** The panel keeps 30 days of history: what you attended, what you skipped,
@@ -28,11 +28,11 @@ No account, no cloud, no browser extension. One calendar link, one USB cable.
 
 ## On the bar
 
-![Browsing the day with the wheel and starting a meeting with the Start button](docs/media/bar-wheel.gif)
+![Stepping through meetings with the wheel and starting one with the Start button](docs/media/bar-wheel.gif)
 
 | On the bar | What it does |
 |---|---|
-| Wheel | browse today's meetings |
+| Wheel | one notch, one meeting: the next or the previous one, across days |
 | Start | begin the selected meeting, end the one in progress, or bring back one you skipped |
 | Back | skip the selected meeting |
 | OK | return to the current meeting |

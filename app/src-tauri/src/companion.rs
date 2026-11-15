@@ -16,7 +16,7 @@ use crate::history::Entry;
 use crate::meeting_state::{started_now, MeetingState};
 use crate::scheduler::{badge_for, transliterate_subject};
 use crate::state::AppState;
-use chrono::{DateTime, Datelike, Local, Timelike, Utc};
+use chrono::{DateTime, Datelike, Local, NaiveDate, Timelike, Utc};
 use serde_json::{json, Value};
 use std::time::{Duration, Instant};
 use tauri::Manager;
@@ -33,7 +33,7 @@ const ALIVE_FOR: Duration = Duration::from_secs(60);
 /// The actions file is cleared once it has grown past this many lines.
 const ACTIONS_MAX_LINES: usize = 40;
 /// Meetings listed for the wheel.
-const DAY_MAX_ITEMS: usize = 16;
+const DAY_MAX_ITEMS: usize = 40;
 
 /// What this app remembers about the companion between two passes.
 #[derive(Debug, Default)]
@@ -85,8 +85,27 @@ fn weekday_fr(date: DateTime<Local>) -> &'static str {
         [date.weekday().num_days_from_monday() as usize]
 }
 
-/// The agenda the companion shows: the meeting that matters now, and today's
-/// meetings for the wheel. Pure, so it can be tested.
+/// What the wheel shows for one meeting: when it is, and the number for the
+/// calendar icon.
+fn item(id: &str, subject: &str, start: DateTime<Utc>, state: &str, today: NaiveDate) -> Value {
+    let local = start.with_timezone(&Local);
+    let is_today = local.date_naive() == today;
+    json!({
+        "id": id,
+        "t": transliterate_subject(subject, 48),
+        "hm": hhmm(local),
+        "lbl": if is_today { hhmm(local) } else { format!("{} {}", weekday_fr(local), hhmm(local)) },
+        "d": local.day(),
+        "s": start.timestamp(),
+        "today": is_today,
+        "st": state,
+    })
+}
+
+/// The agenda the companion shows: the meeting that matters now, and for the
+/// wheel every meeting from this morning onwards, days ahead included, so that
+/// one skipped by mistake can always be reached and resumed. Pure, so it can be
+/// tested.
 pub fn build_agenda(
     current: &MeetingState,
     visible: &[Meeting],
@@ -124,10 +143,10 @@ pub fn build_agenda(
         })
     });
 
-    // Today, in time order: what was done, then what is still to come.
+    // In time order: what was done or skipped since this morning, and what is still to come.
     let mut day: Vec<(DateTime<Utc>, Value)> = Vec::new();
     for entry in history {
-        if entry.start.with_timezone(&Local).date_naive() != today {
+        if entry.start.with_timezone(&Local).date_naive() < today {
             continue;
         }
         // The meeting on screen is listed once, as itself.
@@ -137,38 +156,27 @@ pub fn build_agenda(
         {
             continue;
         }
+        let state = if entry.state == "done" { "done" } else { "skip" };
         day.push((
             entry.start,
-            json!({
-                "id": entry.id,
-                "t": transliterate_subject(&entry.subject, 48),
-                "hm": hhmm(entry.start.with_timezone(&Local)),
-                "st": if entry.state == "done" { "done" } else { "skip" },
-            }),
+            item(&entry.id, &entry.subject, entry.start, state, today),
         ));
     }
     let mut listed: Vec<Meeting> = visible
         .iter()
         .filter(|meeting| meeting.end > now)
-        .filter(|meeting| meeting.start.with_timezone(&Local).date_naive() == today)
         .cloned()
         .collect();
     if let Some(current) = &meeting {
-        if current.start.with_timezone(&Local).date_naive() == today
-            && !listed.iter().any(|meeting| meeting.id == current.id)
-        {
+        if !listed.iter().any(|meeting| meeting.id == current.id) {
             listed.push(current.clone());
         }
     }
     for meeting in listed {
+        let state = if meeting.show_as == "tentative" { "tent" } else { "up" };
         day.push((
             meeting.start,
-            json!({
-                "id": meeting.id,
-                "t": transliterate_subject(&meeting.subject, 48),
-                "hm": hhmm(meeting.start.with_timezone(&Local)),
-                "st": if meeting.show_as == "tentative" { "tent" } else { "up" },
-            }),
+            item(&meeting.id, &meeting.subject, meeting.start, state, today),
         ));
     }
     day.sort_by_key(|(start, _)| *start);
@@ -438,9 +446,15 @@ mod tests {
             vec![
                 ("done".into(), "done".into()),
                 ("next".into(), "up".into()),
-                ("later".into(), "tent".into())
+                ("later".into(), "tent".into()),
+                ("tomorrow".into(), "up".into())
             ]
         );
+        // A meeting on another day says which day, in words and as a number.
+        let last = &agenda["day"][3];
+        assert_eq!(last["today"], false);
+        assert_eq!(last["lbl"].as_str().unwrap().len(), "lun 12:00".len());
+        assert_eq!(agenda["day"][1]["lbl"], agenda["day"][1]["hm"]);
     }
 
     #[test]

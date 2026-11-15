@@ -1,6 +1,6 @@
 [package]
 name = "meeting-display"
-version = "0.5.2"
+version = "0.5.3"
 description = "Meeting Display: next meeting on a BUSY Bar"
 authors = ["MokoGuy"]
 edition = "2021"

@@ -10,15 +10,21 @@ Sans l'app embarquée, tout fonctionne comme avant, sans molette.
 
 | Geste | Effet |
 |---|---|
-| Molette | fait défiler les réunions du jour ; la réunion choisie est en haut, la suivante dessous |
+| Molette | un cran = la réunion suivante ou précédente, sur le même écran que d'habitude ; aujourd'hui et les jours suivants |
 | OK | revient à la réunion du moment |
 | Start | démarre la réunion choisie (à l'heure ou en avance) ; en réunion, la termine ; sur une réunion réalisée ou ignorée, la reprend |
 | Back, appui court | ignore la réunion choisie |
 | Back, appui long | quitte l'app (réservé par la barre) |
-| 10 secondes sans geste | la liste se referme |
+| 10 secondes sans geste | retour à la réunion du moment |
 
-Dans la liste, la barre devant chaque ligne suit le code du panneau : orange pour la réunion
-choisie, grise pour une réunion à venir ou ignorée, verte pour une réunion réalisée.
+Sur chaque réunion, l'icône donne le jour du mois et la ligne du bas l'heure (avec le jour de la
+semaine si ce n'est pas aujourd'hui). À droite : le temps restant pour une réunion d'aujourd'hui,
+« faite » en vert, « ignoree » en gris. Le trait orange sur le bord droit situe la réunion parmi
+les autres. Une réunion ignorée ou réalisée par erreur se reprend ainsi : molette jusqu'à elle,
+puis Start.
+
+Il faut Meeting Display 0.5.3 ou plus récent sur le PC : avant, seules les réunions du jour
+étaient envoyées à la barre.
 
 Une action faite sur la barre arrive à l'app Windows en 5 secondes au plus ; l'écran affiche
 tout de suite « Demarree », « Terminee », « Ignoree » ou « Reprise ».
@@ -31,7 +37,7 @@ par-dessus l'écran, dans `src/animations/` :
 
 | Fichier | Quand | Ce qu'on voit |
 |---|---|---|
-| `wipe_up`, `wipe_down` | molette | un rideau noir traverse l'écran dans le sens du défilement, la liste change dessous |
+| `wipe_up`, `wipe_down` | molette | un rideau noir traverse l'écran dans le sens du défilement, la réunion change dessous |
 | `in_<mot>` | Start ou Back | une flèche orange traverse de gauche à droite ; derrière elle le mot est déjà là |
 | `out_<mot>` | 1,5 s plus tard | la même flèche découvre l'écran suivant |
 
