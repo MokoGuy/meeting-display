@@ -37,7 +37,7 @@ par-dessus l'écran, dans `src/animations/` :
 
 | Fichier | Quand | Ce qu'on voit |
 |---|---|---|
-| `wipe_up`, `wipe_down` | molette | un rideau noir traverse l'écran dans le sens du défilement, la réunion change dessous |
+| `reveal_up`, `reveal_down` | molette | la réunion suivante arrive sous un rideau noir qui se lève dans le sens du défilement ; molette tournée vite (deux crans en moins de 0,45 s) : pas de rideau, la carte change aussitôt |
 | `in_<mot>` | Start ou Back | une flèche orange traverse de gauche à droite ; derrière elle le mot est déjà là |
 | `out_<mot>` | 1,5 s plus tard | la même flèche découvre l'écran suivant |
 

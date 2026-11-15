@@ -1,4 +1,4 @@
-// Meeting Display, on-bar companion.
+﻿// Meeting Display, on-bar companion.
 //
 // The Windows app is the brain: it reads the calendar and writes a small agenda
 // file into this app's data folder. This app is the display and the hands: it
@@ -26,7 +26,7 @@ const KEEPALIVE_MS = 30000; // an unchanged screen is re-sent this often
 const TIMEOUT_S = 60; // elements vanish by themselves if the app dies
 const BROWSE_IDLE_MS = 10000; // the wheel view closes after this long without input
 const FLASH_MS = 1500;
-const COVER_MS = 170; // a curtain covers the screen about 250 ms after it is requested: swap the list after that
+const SPIN_MS = 450; // two notches closer than this are one gesture: no curtain between them
 
 const WHITE = "#FFFFFFFF";
 const DIM = "#FFFFFF90";
@@ -77,6 +77,7 @@ let flash = ""; // the action word on screen, or "" (it is an animation laid ove
 let flashUntil = 0;
 let wheelFx = ""; // the curtain to play with the next list change
 let curtains = 0;
+let lastWheel = 0;
 let lastSignature = "";
 let lastDrawAt = 0;
 let lastIds: string[] = [];
@@ -273,7 +274,6 @@ function fx(id: string, name: string, timeout: number): El {
 }
 // Elements drawn without a z-index end up above a small one, so the overlay takes the largest.
 const FX_Z = 2147483647;
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 async function send(elements: El[], led?: string): Promise<void> {
   const request: Record<string, unknown> = { application_name: APP, priority: 50, elements };
   if (led) request.led_notification_color = led;
@@ -297,17 +297,23 @@ async function render(): Promise<void> {
   try {
     const ids = screen.elements.map((element) => element.id);
     const gone = lastIds.filter((id) => ids.indexOf(id) < 0);
-    if (!word && curtain && signature !== lastSignature) {
+    const elements = screen.elements.slice();
+    if (word) {
+      // After an action word, the arrow that uncovers this screen travels in the same request.
+      elements.push(fx("word", `out_${word}`, 1));
+    } else if (curtain && signature !== lastSignature) {
+      // The curtain is down on its first frame and lifts over the new screen: one request per notch.
       // A fresh id each time: asking again for an animation that is still on screen does not replay it.
       // A finished curtain is transparent and goes away by itself.
       curtains += 1;
-      await send([fx(`wipe${curtains}`, curtain, 1)]);
-      await sleep(COVER_MS);
+      elements.push(fx(`wipe${curtains}`, curtain, 1));
     }
-    if (gone.length > 0) await device.DisplayClear({ application_name: APP, element_ids: gone });
-    // After an action word, the arrow that uncovers this screen travels in the same request.
+    // Not awaited before the draw: both requests travel together, so the new screen is in place
+    // before the curtain lifts.
+    const cleared = gone.length > 0 ? device.DisplayClear({ application_name: APP, element_ids: gone }) : undefined;
     // The LED blinks once when the screen appears, not at every keep-alive.
-    await send(word ? [...screen.elements, fx("word", `out_${word}`, 1)] : screen.elements, signature !== lastSignature ? led : undefined);
+    await send(elements, signature !== lastSignature ? led : undefined);
+    await cleared;
     lastIds = ids;
     lastSignature = signature;
     lastDrawAt = Date.now();
@@ -408,8 +414,11 @@ function onWheel(delta: number): void {
     }
   }
   browse = Math.min(count - 1, Math.max(0, from + delta));
-  // The curtain travels the way the list moves: up towards later meetings.
-  wheelFx = delta > 0 ? "wipe_up" : "wipe_down";
+  // The curtain travels the way the list moves: up towards later meetings. A wheel spun quickly
+  // skips it: the card then changes at once, as fast as the bar can draw.
+  const spinning = Date.now() - lastWheel < SPIN_MS;
+  lastWheel = Date.now();
+  wheelFx = spinning ? "" : delta > 0 ? "reveal_up" : "reveal_down";
   draw();
 }
 

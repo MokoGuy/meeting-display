@@ -5,8 +5,8 @@
 // The bar plays an animation file at 60 frames per second by itself, where an app that
 // redraws every frame manages about 12. So the transitions are overlays:
 //
-//   wipe_up / wipe_down   wheel: a black curtain crosses the screen while the app swaps
-//                         the list underneath
+//   reveal_up / reveal_down   wheel: the next meeting arrives under a black curtain that
+//                         lifts in the direction of travel
 //   in_<word>             action: an orange arrow crosses left to right; behind it the
 //                         word is already there, ahead of it the old screen shows through
 //   out_<word>            the same arrow uncovers the next screen from under the word
@@ -78,9 +78,28 @@ function frame(fn) {
 const ease = (t) => t * t * (3 - 2 * t);
 const CLEAR = () => [0, 0, 0, 0];
 
-// ---------- wheel: a black curtain, 0.1 s to cover, 0.27 s covered, 0.12 s to uncover
-const COVER = 6, COVERED = 16, UNCOVER = 7, FEATHER = 5;
-/** up = true: the curtain travels upward, for a move to a later meeting. */
+// ---------- wheel: a black curtain, 0.05 s to cover, 0.22 s covered, 0.08 s to uncover.
+// The covered time is what the app needs to put the next screen in place (two requests of
+// about 90 ms each); everything else is kept as short as still reads as a movement.
+const COVER = 3, COVERED = 13, UNCOVER = 5, FEATHER = 5;
+/**
+ * The fast variant the app uses: the curtain is already down on the first frame and only lifts.
+ * It travels in the same request as the next screen, so one request is all a notch costs.
+ */
+function reveal(up) {
+  const fromEntry = (y) => (up ? H - 1 - y : y);
+  const frames = [frame(() => [0, 0, 0, 1]), SAME];
+  for (let f = 0; f < LIFT; f++) {
+    const edge = ease((f + 1) / LIFT) * (H + FEATHER);
+    frames.push(frame((x, y) => [0, 0, 0, 1 - (edge - fromEntry(y)) / FEATHER]));
+  }
+  frames.push(frame(CLEAR));
+  return frames;
+}
+const LIFT = 7;
+
+/** The two-step variant, kept for reference: covers, waits for the app, uncovers. up = true: the curtain travels upward. */
+// eslint-disable-next-line no-unused-vars
 function wipe(up) {
   const fromEntry = (y) => (up ? H - 1 - y : y);
   const frames = [];
@@ -157,7 +176,7 @@ async function capture(word) {
 }
 
 mkdirSync(OUT, { recursive: true });
-const files = [["wipe_up", wipe(true)], ["wipe_down", wipe(false)]];
+const files = [["reveal_up", reveal(true)], ["reveal_down", reveal(false)]];
 try {
   for (const word of WORDS) {
     const shot = await capture(word);
