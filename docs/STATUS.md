@@ -35,6 +35,8 @@ option de démarrage automatique des réunions, mise à jour automatique. Le gui
 | Affichage par-dessus l'app Clock | mesure : dessin refusé à la priorité 50 et en dessous, accepté à 51 | écrans ambiants passés à 55 et 56 |
 | Installation | installeur NSIS lancé en mode silencieux | app installée, raccourci menu Démarrer, réglages conservés |
 | Build signé | `node tools/release.mjs` | installeur, signature et `latest.json` produits |
+| Mise à jour automatique | version 0.3.1 installée, release 0.3.2 publiée, app relancée | l'app a installé la 0.3.2 seule, une minute après son lancement, puis s'est relancée |
+| Release publique | téléchargement anonyme de `latest.json` et de l'installeur | HTTP 200 sans connexion GitHub |
 | Calendrier de test | `node tools/test-calendar.mjs --scenario day` relu par le code de l'app | 6 réunions gardées, 3 écartées comme prévu |
 
 ## Vérifié seulement en aperçu navigateur (données fictives)
@@ -49,7 +51,6 @@ option de démarrage automatique des réunions, mise à jour automatique. Le gui
 | Le panneau dans la vraie fenêtre de l'app | jamais ouvert ni cliqué depuis l'app installée |
 | Boutons Démarrer, Ignorer, Terminer | le code est simple et compilé, mais aucun clic réel n'a été fait |
 | Démarrer une réunion en avance | idem |
-| Mise à jour automatique | compilée et signée ; aucune release n'existe encore, donc aucun téléchargement n'a eu lieu |
 | Workflow GitHub Actions | fourni comme modèle (`tools/release-workflow.yml`), jamais exécuté : le jeton GitHub du poste n'a pas le droit `workflow` |
 | Lancement au démarrage de Windows | interrupteur présent, jamais activé |
 | Heures de silence et mode discret en réel | tests unitaires seulement |
@@ -74,8 +75,11 @@ pointe l'app installée sur un calendrier de test, puis remet les réglages d'or
 
 ## Publication
 
+- Le dépôt public est `MokoGuy/meeting-display`. Il a été créé avec un historique neuf (un commit
+  de départ) après une revue de l'ancien historique, resté dans un dépôt privé d'archive.
 - Mise à jour automatique : `plugins.updater` de `tauri.conf.json` pointe sur le fichier
-  `latest.json` de la dernière release GitHub. Un dépôt privé ne peut pas le servir sans
-  identifiants : la mise à jour automatique ne fonctionne que si le dépôt des releases est public.
+  `latest.json` de la dernière release de ce dépôt.
+- Juste après la publication d'une release, GitHub peut servir l'ancien `latest.json` pendant
+  quelques minutes : un premier contrôle fait trop tôt a répondu « à jour ».
 - La clé privée de signature est hors dépôt (`~/.tauri/meeting-display.key`). Elle doit être
   conservée : sans elle, plus aucune mise à jour ne peut être signée.
