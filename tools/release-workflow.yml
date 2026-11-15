@@ -1,0 +1,60 @@
+# TEMPLATE: copy this file to .github/workflows/release.yml to enable it. Pushing a workflow
+# needs a GitHub token with the `workflow` scope (gh auth refresh -s workflow).
+#
+# Builds the Windows installer and publishes it as a GitHub release.
+# Triggered by pushing a tag such as v0.3.1 (the version in app/src-tauri/tauri.conf.json).
+#
+# Needs one repository secret: TAURI_SIGNING_PRIVATE_KEY, the content of the update
+# signing key (generated with `npx tauri signer generate`). The matching public key
+# is in tauri.conf.json; installed apps only accept updates signed with this key.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+
+      - name: Install frontend dependencies
+        working-directory: app
+        run: npm ci
+
+      - name: Run tests
+        working-directory: app/src-tauri
+        run: cargo test
+
+      - name: Build, sign and publish
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          projectPath: app
+          tagName: v__VERSION__
+          releaseName: Meeting Display __VERSION__
+          releaseBody: Installeur Windows. Les versions installées se mettent à jour seules.
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true

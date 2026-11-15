@@ -1,0 +1,59 @@
+/* Generated from the Meeting Display design system (tokens.json). Do not edit by hand:
+   change the tokens in the design system, then regenerate. */
+:root {
+  --ground: #fafafb;
+  --raised: #ffffff;
+  --ink: #1b1c1f;
+  --ink-muted: #5f6068;
+  --ink-subtle: #70717a;
+  --hairline: rgba(0, 0, 0, 0.09);
+  --field-border: rgba(0, 0, 0, 0.42);
+  --quiet: rgba(0, 0, 0, 0.06);
+  --quiet-hover: rgba(0, 0, 0, 0.11);
+  --bar: rgba(0, 0, 0, 0.42);
+  --accent: #ea5212;
+  --accent-fill: #c2410c;
+  --accent-fill-hover: #a8370a;
+  --on-accent: #ffffff;
+  --live: #0d7a3c;
+  --date: #c62828;
+  --offline: #70717a;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --radius-bar: 2px;
+  --radius-control: 8px;
+  --radius-panel: 12px;
+  --radius-pill: 15px;
+  --panel-width: 340px;
+  --panel-height: 440px;
+  --control-height: 30px;
+  --field-height: 32px;
+  --row-height: 36px;
+  --font-sans: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #1b1c1f;
+    --raised: #26272b;
+    --ink: #f3f3f4;
+    --ink-muted: #b9bac1;
+    --ink-subtle: #8f9098;
+    --hairline: rgba(255, 255, 255, 0.10);
+    --field-border: rgba(255, 255, 255, 0.45);
+    --quiet: rgba(255, 255, 255, 0.10);
+    --quiet-hover: rgba(255, 255, 255, 0.17);
+    --bar: rgba(255, 255, 255, 0.45);
+    --accent: #f26322;
+    --accent-fill: #ff8a50;
+    --accent-fill-hover: #ffa070;
+    --on-accent: #1b1c1f;
+    --live: #2fd07a;
+    --date: #ff6961;
+    --offline: #8f9098;
+    color-scheme: dark;
+  }
+}

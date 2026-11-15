@@ -1,0 +1,85 @@
+/* Layout of the two views of the panel. Colours, type and every control come
+   from the design system (src/ui/tokens.css and src/ui/components.css). */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: var(--panel-width);
+  min-height: var(--panel-height);
+  background: transparent;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+.app.md-panel {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda,
+.settings {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin-right: -6px;
+  padding-right: 6px;
+}
+
+.agenda::-webkit-scrollbar,
+.settings::-webkit-scrollbar {
+  width: 6px;
+}
+
+.agenda::-webkit-scrollbar-thumb,
+.settings::-webkit-scrollbar-thumb {
+  background: var(--quiet-hover);
+  border-radius: 3px;
+}
+
+.md-now-subject {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.empty {
+  margin: 4px 0 0;
+  color: var(--ink-muted);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: -4px 0 var(--space-2) -8px;
+}
+
+.settings-header h1 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.time-row {
+  display: flex;
+  gap: var(--space-4);
+}
