@@ -173,7 +173,9 @@
 
 /* Navigation entre les jours */
 .md-daynav { display: flex; align-items: center; gap: 2px; padding-bottom: var(--space-3); margin-left: -6px; }
-.md-daynav .md-caps { padding: 0 2px; }
+/* Largeur fixe : la date la plus longue (« dimanche 26 septembre ») mesure 154 px.
+   Les deux flèches ne bougent donc jamais quand on change de jour. */
+.md-daynav .md-caps { flex: none; width: 158px; padding: 0 2px; text-align: center; white-space: nowrap; }
 .md-daynav-side { margin-left: auto; font-size: 12px; line-height: 16px; color: var(--ink-muted); }
 .md-nav-button {
   appearance: none; border: 0; margin: 0; padding: 0;
