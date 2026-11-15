@@ -83,6 +83,8 @@ pub struct MeetingStatusDto {
     /// "none", "upcoming", "armed", "live" or "overrun".
     pub phase: String,
     pub meeting: Option<crate::calendar::Meeting>,
+    /// Meetings the user skipped or ended that have not finished yet.
+    pub dismissed: usize,
 }
 
 #[tauri::command]
@@ -111,6 +113,7 @@ pub fn get_meeting_status(app: AppHandle) -> MeetingStatusDto {
     MeetingStatusDto {
         phase: phase.to_string(),
         meeting,
+        dismissed: state.dismissed_upcoming(Utc::now()),
     }
 }
 
@@ -341,6 +344,14 @@ pub async fn end_meeting(app: AppHandle) -> Result<(), String> {
             _ => return Err("No meeting in progress".to_string()),
         }
     }
+    crate::scheduler::tick(&app).await;
+    Ok(())
+}
+
+/// Brings back every meeting the user skipped or ended by hand.
+#[tauri::command]
+pub async fn restore_meetings(app: AppHandle) -> Result<(), String> {
+    app.state::<AppState>().restore_dismissed();
     crate::scheduler::tick(&app).await;
     Ok(())
 }

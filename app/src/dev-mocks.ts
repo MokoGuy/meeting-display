@@ -52,7 +52,7 @@ export function installMocks() {
       case "get_settings":
         return settings;
       case "get_meeting_status":
-        return { phase: current ? phase : "none", meeting: current ?? null };
+        return { phase: current ? phase : "none", meeting: current ?? null, dismissed: phase === "upcoming" ? 2 : 0 };
       case "get_meetings":
         return current ? [current, ...later] : [];
       case "get_autostart":

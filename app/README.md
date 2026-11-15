@@ -37,7 +37,7 @@ Un clic sur l'icône ouvre le panneau : la date du jour, la réunion du moment e
 puis le reste de la journée et les jours suivants.
 
 Sur la réunion du moment : **Démarrer** la valide (à l'heure, ou en avance), **Ignorer** l'écarte,
-**Terminer** la clôt. Une réunion ignorée ou terminée ne revient pas avant le redémarrage de l'app.
+**Terminer** la clôt. Une réunion ignorée ou terminée disparaît de la liste ; **Rétablir**, en bas de l'agenda, les fait toutes revenir (un redémarrage de l'app aussi).
 Clic droit sur l'icône puis **Démarrer la réunion** valide aussi. Le bouton physique de la barre
 ne peut pas servir à valider (l'API de la barre ne signale pas les appuis). Avec l'option
 **Passer en réunion automatiquement à l'heure**, la validation est faite d'office.

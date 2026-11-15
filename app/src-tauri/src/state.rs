@@ -133,6 +133,23 @@ impl AppState {
             .collect()
     }
 
+    /// Dismissed meetings that have not ended yet: the ones worth bringing back.
+    pub fn dismissed_upcoming(&self, now: chrono::DateTime<chrono::Utc>) -> usize {
+        let dismissed = self.dismissed.lock().expect("dismissed state poisoned");
+        self.meetings()
+            .iter()
+            .filter(|meeting| meeting.end > now && dismissed.contains(&meeting.id))
+            .count()
+    }
+
+    /// Forgets every skip or early end: all known meetings are shown again.
+    pub fn restore_dismissed(&self) {
+        self.dismissed
+            .lock()
+            .expect("dismissed state poisoned")
+            .clear();
+    }
+
     pub fn dismiss(&self, meeting_id: &str) {
         self.dismissed
             .lock()

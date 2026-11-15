@@ -12,6 +12,7 @@ import {
   getSettings,
   onConnectionChanged,
   onMeetingsChanged,
+  restoreMeetings,
   saveCalendarSettings,
   saveMeetingSettings,
   saveSettings,
@@ -74,7 +75,7 @@ function nowLine(status: MeetingStatusDto, now: number) {
 function App() {
   const [view, setView] = useState<View>("main");
   const [connection, setConnection] = useState(initialConnection);
-  const [status, setStatus] = useState<MeetingStatusDto>({ phase: "none", meeting: null });
+  const [status, setStatus] = useState<MeetingStatusDto>({ phase: "none", meeting: null, dismissed: 0 });
   const [meetings, setMeetings] = useState<MeetingDto[]>([]);
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState("");
@@ -213,7 +214,7 @@ function App() {
           </header>
 
           <div className="agenda">
-            {groups.length === 0 && (
+            {groups.length === 0 && status.dismissed === 0 && (
               <p className="empty">
                 {icsUrl.trim()
                   ? "Aucune réunion dans les 7 prochains jours."
@@ -246,6 +247,14 @@ function App() {
                 ))}
               </section>
             ))}
+            {status.dismissed > 0 && (
+              <div className="restore">
+                <span>
+                  {status.dismissed === 1 ? "1 réunion écartée" : `${status.dismissed} réunions écartées`}
+                </span>
+                <Button onClick={() => void act(restoreMeetings)}>Rétablir</Button>
+              </div>
+            )}
           </div>
 
           <footer className="md-footer">

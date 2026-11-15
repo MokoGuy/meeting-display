@@ -77,6 +77,8 @@ export type MeetingPhase = "none" | "upcoming" | "armed" | "live" | "overrun";
 export interface MeetingStatusDto {
   phase: MeetingPhase;
   meeting: MeetingDto | null;
+  /** Meetings skipped or ended by hand that have not finished yet. */
+  dismissed: number;
 }
 export const getMeetingStatus = () => invoke<MeetingStatusDto>("get_meeting_status");
 
@@ -86,3 +88,5 @@ export const startMeetingNow = () => invoke<void>("start_meeting_now");
 export const skipMeeting = () => invoke<void>("skip_meeting");
 /** Ends the meeting in progress (or its overrun). */
 export const endMeeting = () => invoke<void>("end_meeting");
+/** Brings back every meeting skipped or ended by hand. */
+export const restoreMeetings = () => invoke<void>("restore_meetings");

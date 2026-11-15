@@ -760,7 +760,8 @@ mod tests {
             .lock()
             .await
             .iter()
-            .any(|line| line.starts_with("DELETE /api/display/draw?application_name=meeting_display")));
+            .any(|line| line
+                .starts_with("DELETE /api/display/draw?application_name=meeting_display")));
     }
 }
 
@@ -800,7 +801,10 @@ mod integration_tests {
                 .unwrap();
             if file.ends_with(".snd") {
                 println!("playing {file}");
-                client.play_asset_sound("meeting_display", file).await.unwrap();
+                client
+                    .play_asset_sound("meeting_display", file)
+                    .await
+                    .unwrap();
                 tokio::time::sleep(std::time::Duration::from_millis(3500)).await;
             }
         }
