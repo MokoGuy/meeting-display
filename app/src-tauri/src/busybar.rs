@@ -659,7 +659,7 @@ mod tests {
 
     fn sample_draw_request() -> DrawRequest {
         DrawRequest {
-            application_name: "teams_meet".into(),
+            application_name: "meeting_display".into(),
             priority: 60,
             led_notification_color: Some("#6264A7FF".into()),
             elements: vec![DrawElement::Countdown {
@@ -746,21 +746,21 @@ mod tests {
     #[tokio::test]
     async fn clear_uses_delete_with_application_name() {
         let (base, log) = server_recording(vec![(
-            "/api/display/draw?application_name=teams_meet".into(),
+            "/api/display/draw?application_name=meeting_display".into(),
             200,
             r#"{"result":"OK"}"#.into(),
         )])
         .await;
         BusyBarClient::new(&base)
             .unwrap()
-            .clear("teams_meet")
+            .clear("meeting_display")
             .await
             .unwrap();
         assert!(log
             .lock()
             .await
             .iter()
-            .any(|line| line.starts_with("DELETE /api/display/draw?application_name=teams_meet")));
+            .any(|line| line.starts_with("DELETE /api/display/draw?application_name=meeting_display")));
     }
 }
 
@@ -788,19 +788,19 @@ mod integration_tests {
         client.set_volume(50.0).await.unwrap();
         assert_eq!(client.volume().await.unwrap(), 50.0);
         client
-            .play_stock_sound("teams_meet", "shared/calendar_event_starts.snd")
+            .play_stock_sound("meeting_display", "shared/calendar_event_starts.snd")
             .await
             .unwrap();
         tokio::time::sleep(std::time::Duration::from_millis(3500)).await;
         // Our own sounds: upload, then play each one.
         for (file, bytes) in crate::screens::ASSETS {
             client
-                .upload_asset("teams_meet", file, bytes)
+                .upload_asset("meeting_display", file, bytes)
                 .await
                 .unwrap();
             if file.ends_with(".snd") {
                 println!("playing {file}");
-                client.play_asset_sound("teams_meet", file).await.unwrap();
+                client.play_asset_sound("meeting_display", file).await.unwrap();
                 tokio::time::sleep(std::time::Duration::from_millis(3500)).await;
             }
         }

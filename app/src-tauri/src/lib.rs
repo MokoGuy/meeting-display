@@ -96,7 +96,7 @@ pub fn run() {
         .expect("error while building tauri application")
         .run(|app_handle, event| {
             // On exit, best-effort removal of our drawn elements so no
-            // teams_meet reminder is left on the bar's screen after quitting.
+            // Meeting Display screen is left on the bar's screen after quitting.
             if let tauri::RunEvent::ExitRequested { .. } = event {
                 let state = app_handle.state::<state::AppState>();
                 // Stop the scheduler from drawing, wait for any in-flight draw
@@ -110,7 +110,7 @@ pub fn run() {
                     // this does not deadlock the scheduler task.
                     let _guard = state.draw_lock.lock().await;
                     if let Ok(client) = busybar::BusyBarClient::new(&base) {
-                        let _ = client.clear("teams_meet").await;
+                        let _ = client.clear(screens::APP).await;
                         let current = state
                             .meeting_state
                             .lock()

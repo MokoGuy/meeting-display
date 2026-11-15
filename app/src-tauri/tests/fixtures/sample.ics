@@ -1,6 +1,6 @@
 BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//BusyBar Teams//M2a//EN
+PRODID:-//Meeting Display//fixture//EN
 BEGIN:VTIMEZONE
 TZID:Romance Standard Time
 BEGIN:STANDARD

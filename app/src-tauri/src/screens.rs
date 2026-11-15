@@ -14,7 +14,7 @@ use crate::calendar::Meeting;
 use crate::scheduler::transliterate_subject;
 use chrono::{DateTime, Datelike, Local, Timelike, Utc};
 
-pub const APP: &str = "teams_meet";
+pub const APP: &str = "meeting_display";
 pub const ICON_FILE: &str = "calendar.png";
 pub const ICON_BYTES: &[u8] = include_bytes!("../assets/calendar.png");
 

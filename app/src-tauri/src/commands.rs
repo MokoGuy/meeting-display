@@ -448,7 +448,7 @@ fn notify_failure(app: &AppHandle, message: &str) {
 fn notify(app: &AppHandle, message: &str) -> Result<(), String> {
     app.notification()
         .builder()
-        .title("Busy Bar Teams")
+        .title("Meeting Display")
         .body(message)
         .show()
         .map_err(|error| error.to_string())
