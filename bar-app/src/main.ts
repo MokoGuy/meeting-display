@@ -26,6 +26,7 @@ const KEEPALIVE_MS = 30000; // an unchanged screen is re-sent this often
 const TIMEOUT_S = 60; // elements vanish by themselves if the app dies
 const BROWSE_IDLE_MS = 10000; // the wheel view closes after this long without input
 const FLASH_MS = 1500;
+const COVER_MS = 170; // a curtain covers the screen about 250 ms after it is requested: swap the list after that
 
 const WHITE = "#FFFFFFFF";
 const DIM = "#FFFFFF90";
@@ -68,12 +69,14 @@ type El = Record<string, unknown> & { id: string };
 let agenda: Agenda = { seq: -1, cur: null, day: [] };
 let browse = -1; // index in agenda.day, or -1 when the wheel view is closed
 let lastInput = 0;
-let flash = "";
+let flash = ""; // the action word on screen, or "" (it is an animation laid over everything else)
 let flashUntil = 0;
+let wheelFx = ""; // the curtain to play with the next list change
+let curtains = 0;
 let lastSignature = "";
 let lastDrawAt = 0;
 let lastIds: string[] = [];
-let drawing = false;
+let queue: Promise<void> = Promise.resolve();
 
 const nowS = () => Math.floor(Date.now() / 1000);
 
@@ -255,42 +258,68 @@ function emptyScreen(): { elements: El[] } {
   };
 }
 
-function flashScreen(message: string): { elements: El[] } {
-  return {
-    elements: [rect("bg", 0, 0, 72, 16, ["#000000FF"]), text("title", message, "bold", 36, 3, WHITE, { align: "top_mid" })],
-  };
+// ---------- transitions
+// The bar plays an animation file at 60 frames per second by itself; redrawing every frame
+// from here manages about 12. So a transition is one animation element laid over the screen
+// (see scripts/make-anims.mjs for what each file shows), and the screen changes under it.
+function fx(id: string, name: string, timeout: number): El {
+  return { id, type: "animation", display: "front", x: 0, y: 0, path: `animations/${name}.anim`, loop: false, z_index: FX_Z, timeout };
+}
+// Elements drawn without a z-index end up above a small one, so the overlay takes the largest.
+const FX_Z = 2147483647;
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+async function send(elements: El[], led?: string): Promise<void> {
+  const request: Record<string, unknown> = { application_name: APP, priority: 50, elements };
+  if (led) request.led_notification_color = led;
+  await device.DisplayDraw(request as unknown as Parameters<typeof device.DisplayDraw>[0]);
 }
 
 // ---------- drawing: only when something changed, one request at a time
-async function draw(): Promise<void> {
-  if (drawing) return;
-  const screen =
-    Date.now() < flashUntil
-      ? flashScreen(flash)
-      : browse >= 0 && agenda.day[browse]
-        ? browseScreen(agenda.day, browse)
-        : agenda.cur
-          ? meetingScreen(agenda.cur)
-          : emptyScreen();
+function draw(): void {
+  queue = queue.then(render).catch(report);
+}
+
+async function render(): Promise<void> {
+  if (flash && Date.now() < flashUntil) return; // the word covers the screen
+  const screen = browse >= 0 && agenda.day[browse] ? browseScreen(agenda.day, browse) : agenda.cur ? meetingScreen(agenda.cur) : emptyScreen();
   const led = "led" in screen ? (screen as { led?: string }).led : undefined;
   const signature = JSON.stringify(screen.elements) + (led ?? "");
-  if (signature === lastSignature && Date.now() - lastDrawAt < KEEPALIVE_MS) return;
-  drawing = true;
+  const word = flash;
+  const curtain = wheelFx;
+  wheelFx = "";
+  if (!word && signature === lastSignature && Date.now() - lastDrawAt < KEEPALIVE_MS) return;
   try {
     const ids = screen.elements.map((element) => element.id);
     const gone = lastIds.filter((id) => ids.indexOf(id) < 0);
+    if (!word && curtain && signature !== lastSignature) {
+      // A fresh id each time: asking again for an animation that is still on screen does not replay it.
+      // A finished curtain is transparent and goes away by itself.
+      curtains += 1;
+      await send([fx(`wipe${curtains}`, curtain, 1)]);
+      await sleep(COVER_MS);
+    }
     if (gone.length > 0) await device.DisplayClear({ application_name: APP, element_ids: gone });
-    const request: Record<string, unknown> = { application_name: APP, priority: 50, elements: screen.elements };
+    // After an action word, the arrow that uncovers this screen travels in the same request.
     // The LED blinks once when the screen appears, not at every keep-alive.
-    if (led && signature !== lastSignature) request.led_notification_color = led;
-    await device.DisplayDraw(request as unknown as Parameters<typeof device.DisplayDraw>[0]);
+    await send(word ? [...screen.elements, fx("word", `out_${word}`, 1)] : screen.elements, signature !== lastSignature ? led : undefined);
     lastIds = ids;
     lastSignature = signature;
     lastDrawAt = Date.now();
+  } finally {
+    flash = "";
+  }
+}
+
+/** The arrow brings the action word over whatever is on screen; `render` takes it away. */
+async function showWord(word: string): Promise<void> {
+  try {
+    await send([fx("word", `in_${word}`, 4)]);
+    flash = word;
+    flashUntil = Date.now() + FLASH_MS;
+    setTimeout(draw, FLASH_MS + 20);
   } catch (err) {
     report(err);
-  } finally {
-    drawing = false;
+    draw();
   }
 }
 
@@ -308,7 +337,7 @@ async function readAgenda(): Promise<void> {
       browse = -1;
       for (let i = 0; i < agenda.day.length; i++) if (agenda.day[i].id === chosenId) browse = i;
     }
-    void draw();
+    draw();
   } catch (err) {
     report(err);
   }
@@ -326,12 +355,11 @@ async function post(path: string, body: string, append: boolean): Promise<void> 
   }
 }
 
-function act(action: string, id: string, message: string): void {
+/** `word` names the animation pair that shows it: demarree, terminee, ignoree or reprise. */
+function act(action: string, id: string, word: string): void {
   void post(ACTIONS, `${Date.now()}|${action}|${id}\n`, true);
-  flash = message;
-  flashUntil = Date.now() + FLASH_MS;
   browse = -1;
-  void draw();
+  queue = queue.then(() => showWord(word)).catch(report);
 }
 
 // ---------- input
@@ -349,9 +377,9 @@ function onStart(): void {
   const { item, isCur } = chosen();
   if (!item) return;
   const cur = agenda.cur;
-  if (item.st === "done" || item.st === "skip") return act("resume", item.id, "Reprise");
-  if (isCur && cur && (cur.phase === "live" || cur.phase === "overrun")) return act("end", item.id, "Terminee");
-  act("start", item.id, "Demarree");
+  if (item.st === "done" || item.st === "skip") return act("resume", item.id, "reprise");
+  if (isCur && cur && (cur.phase === "live" || cur.phase === "overrun")) return act("end", item.id, "terminee");
+  act("start", item.id, "demarree");
 }
 
 function onBack(): void {
@@ -359,7 +387,7 @@ function onBack(): void {
   if (!item || item.st === "done" || item.st === "skip") return;
   const cur = agenda.cur;
   if (isCur && cur && (cur.phase === "live" || cur.phase === "overrun")) return; // end it with START instead
-  act("skip", item.id, "Ignoree");
+  act("skip", item.id, "ignoree");
 }
 
 function onWheel(delta: number): void {
@@ -375,19 +403,21 @@ function onWheel(delta: number): void {
   } else {
     browse = Math.min(count - 1, Math.max(0, browse + delta));
   }
-  void draw();
+  // The curtain travels the way the list moves: up towards later meetings.
+  wheelFx = delta > 0 ? "wipe_up" : "wipe_down";
+  draw();
 }
 
 function main(): void {
   void readAgenda();
   void post(ALIVE, String(Date.now()), false);
-  void draw();
+  draw();
 
   setInterval(() => void readAgenda(), POLL_MS);
   setInterval(() => void post(ALIVE, String(Date.now()), false), ALIVE_MS);
   setInterval(() => {
     if (browse >= 0 && Date.now() - lastInput > BROWSE_IDLE_MS) browse = -1;
-    void draw();
+    draw();
   }, TICK_MS);
 
   // Long BACK is the firmware's way out of any app; short BACK is ours.
@@ -399,7 +429,7 @@ function main(): void {
     else if (event.key === "back") onBack();
     else if (event.key === "ok") {
       browse = -1;
-      void draw();
+      draw();
     }
   });
 }

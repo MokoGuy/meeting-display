@@ -23,6 +23,23 @@ choisie, grise pour une réunion à venir ou ignorée, verte pour une réunion r
 Une action faite sur la barre arrive à l'app Windows en 5 secondes au plus ; l'écran affiche
 tout de suite « Demarree », « Terminee », « Ignoree » ou « Reprise ».
 
+## Transitions
+
+La barre joue elle-même un fichier d'animation à 60 images par seconde ; une app qui redessine
+chaque image n'en tient qu'une douzaine. Les transitions sont donc des fichiers d'animation posés
+par-dessus l'écran, dans `src/animations/` :
+
+| Fichier | Quand | Ce qu'on voit |
+|---|---|---|
+| `wipe_up`, `wipe_down` | molette | un rideau noir traverse l'écran dans le sens du défilement, la liste change dessous |
+| `in_<mot>` | Start ou Back | une flèche orange traverse de gauche à droite ; derrière elle le mot est déjà là |
+| `out_<mot>` | 1,5 s plus tard | la même flèche découvre l'écran suivant |
+
+Les mots (« Demarree », « Terminee », « Ignoree », « Reprise ») sont dessinés dans les fichiers,
+à partir d'une capture de la barre pour avoir sa police. Pour changer un mot, la couleur ou la
+vitesse : modifier `scripts/make-anims.mjs`, puis, barre branchée, `node scripts/make-anims.mjs`
+et réinstaller l'app.
+
 ## Installer sur la barre
 
 Barre branchée en USB, depuis **PowerShell** (pas Git Bash : l'étape d'archivage y échoue) :

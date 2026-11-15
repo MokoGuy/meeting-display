@@ -40,6 +40,7 @@ option de démarrage automatique des réunions, mise à jour automatique. Le gui
 | Historique sur disque | tests unitaires : enregistrement, durée prévue et réelle, une entrée par réunion, fenêtre de 30 jours, relecture après redémarrage | 5 tests réussis |
 | Réunion lancée en avance | test unitaire | dure sa durée prévue à partir du lancement |
 | App embarquée : molette et boutons | app installée sur la barre, calendrier de test, touches simulées par l'API | défilement des réunions, retour par OK, Start démarre puis termine, Back ignore, Start reprend ; chaque action reçue par l'app Windows et inscrite dans l'historique |
+| App embarquée : transitions animées | app installée sur la barre, agenda fictif, touches simulées, captures d'écran en rafale | molette : le rideau noir couvre l'écran pendant que la liste change ; action : la flèche orange amène le mot puis découvre l'écran suivant, sans trou d'affichage. La fluidité elle-même (60 images par seconde) n'est pas mesurable par capture : jugée à l'œil sur la barre |
 | Lancement de l'app embarquée | démarrage de l'app Windows | l'app embarquée est lancée et reçoit l'agenda |
 | Calendrier de test | `node tools/test-calendar.mjs --scenario day` relu par le code de l'app | 6 réunions gardées, 3 écartées comme prévu |
 
