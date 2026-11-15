@@ -139,6 +139,8 @@ pub async fn install_bar_app(client: &BusyBarClient) -> Result<(), String> {
         Err(error) => tracing::info!(companion = "install", to = PACKAGE_VERSION, ok = false, %error),
     }
     outcome.map_err(|error| format!("Installation sur la barre impossible : {error}"))?;
+    // Give the bar a moment to settle on the new files before starting them.
+    tokio::time::sleep(Duration::from_secs(1)).await;
     let launched = client.launch_app(APP_ID).await.is_ok();
     tracing::info!(companion = "launch", launched);
     Ok(())
@@ -156,12 +158,16 @@ async fn ensure_bar_app(state: &AppState, client: &BusyBarClient) {
         .lock()
         .expect("companion state poisoned")
         .bar_app_checked = true;
-    let allowed = state
-        .bar_install_allowed
-        .swap(false, std::sync::atomic::Ordering::SeqCst);
+    // Raised before the permission is taken back, so that the startup launch, which looks at
+    // both, never sees a moment where neither is set: launching the app while the bar is
+    // replacing it, or twice at once, crashes the bar's JavaScript engine.
+    let order = std::sync::atomic::Ordering::SeqCst;
+    state.bar_installing.store(true, order);
+    let allowed = state.bar_install_allowed.swap(false, order);
     if allowed && bar_app_behind(on_bar.as_deref()) {
         let _ = install_bar_app(client).await;
     }
+    state.bar_installing.store(false, order);
 }
 
 fn hhmm(time: DateTime<Local>) -> String {
@@ -484,10 +490,8 @@ pub async fn launch(app: tauri::AppHandle) {
     let state = app.state::<AppState>();
     // An update is about to replace the on-bar app: starting the old one now would only get
     // in the way of the install, which launches the new one itself.
-    if state
-        .bar_install_allowed
-        .load(std::sync::atomic::Ordering::SeqCst)
-    {
+    let order = std::sync::atomic::Ordering::SeqCst;
+    if state.bar_install_allowed.load(order) || state.bar_installing.load(order) {
         return;
     }
     if let Ok(client) = BusyBarClient::new(&state.base_url()) {

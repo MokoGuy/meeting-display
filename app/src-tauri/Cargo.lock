@@ -2291,7 +2291,7 @@ dependencies = [
 
 [[package]]
 name = "meeting-display"
-version = "0.5.7"
+version = "0.5.8"
 dependencies = [
  "calcard",
  "chrono",

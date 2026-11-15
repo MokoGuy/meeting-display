@@ -37,6 +37,8 @@ pub struct AppState {
     pub update_available: Mutex<Option<String>>,
     /// The user asked for an update: the bar's app may be installed without asking again.
     pub bar_install_allowed: AtomicBool,
+    /// The on-bar app is being replaced right now: nothing else may launch it meanwhile.
+    pub bar_installing: AtomicBool,
     /// Whether our assets (icon and sounds) have been stored on the bar since the last failure.
     pub icon_uploaded: AtomicBool,
 }
@@ -87,6 +89,7 @@ impl AppState {
             update_note: Mutex::new(None),
             update_available: Mutex::new(None),
             bar_install_allowed: AtomicBool::new(false),
+            bar_installing: AtomicBool::new(false),
             icon_uploaded: AtomicBool::new(false),
         }
     }
