@@ -23,6 +23,12 @@ semaine si ce n'est pas aujourd'hui). À droite : le temps restant pour une réu
 les autres. Une réunion ignorée ou réalisée par erreur se reprend ainsi : molette jusqu'à elle,
 puis Start.
 
+Toutes les trois secondes, la ligne du bas bascule entre **quand** (l'heure, et le temps restant
+ou l'état) et **combien de temps** : « duree 1h00 » pour une réunion à venir ou ignorée,
+« prevu 15 » et « reel 14 » pour une réunion réalisée. Il en va de même sur l'écran de repos, pour
+le prochain rendez-vous. Les écrans actifs (compte à rebours, START, LIVE, dépassement) ne
+basculent pas. Il faut Meeting Display 0.5.9 ou plus récent sur le PC pour les durées.
+
 Il faut Meeting Display 0.5.3 ou plus récent sur le PC : avant, seules les réunions du jour
 étaient envoyées à la barre.
 

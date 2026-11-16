@@ -181,10 +181,23 @@ fn weekday_fr(date: DateTime<Local>) -> &'static str {
 
 /// What the wheel shows for one meeting: when it is, and the number for the
 /// calendar icon.
-fn item(id: &str, subject: &str, start: DateTime<Utc>, state: &str, today: NaiveDate) -> Value {
+/// `planned` and `real` are lengths in seconds; `real` only exists for a meeting that was held.
+fn item(
+    id: &str,
+    subject: &str,
+    start: DateTime<Utc>,
+    state: &str,
+    today: NaiveDate,
+    planned: i64,
+    real: Option<i64>,
+) -> Value {
     let local = start.with_timezone(&Local);
     let is_today = local.date_naive() == today;
+    // Whole minutes, rounded: what the bar shows next to "duree", "prevu" and "reel".
+    let minutes = |seconds: i64| (seconds.max(0) + 30) / 60;
     json!({
+        "dur": minutes(planned),
+        "real": real.map(minutes),
         "id": id,
         "t": transliterate_subject(subject, 48),
         "hm": hhmm(local),
@@ -253,7 +266,18 @@ pub fn build_agenda(
         let state = if entry.state == "done" { "done" } else { "skip" };
         day.push((
             entry.start,
-            item(&entry.id, &entry.subject, entry.start, state, today),
+            item(
+                &entry.id,
+                &entry.subject,
+                entry.start,
+                state,
+                today,
+                entry.planned_secs,
+                match (entry.started_at, entry.ended_at) {
+                    (Some(started), Some(ended)) => Some((ended - started).num_seconds()),
+                    _ => None,
+                },
+            ),
         ));
     }
     let mut listed: Vec<Meeting> = visible
@@ -270,7 +294,15 @@ pub fn build_agenda(
         let state = if meeting.show_as == "tentative" { "tent" } else { "up" };
         day.push((
             meeting.start,
-            item(&meeting.id, &meeting.subject, meeting.start, state, today),
+            item(
+                &meeting.id,
+                &meeting.subject,
+                meeting.start,
+                state,
+                today,
+                (meeting.end - meeting.start).num_seconds(),
+                None,
+            ),
         ));
     }
     day.sort_by_key(|(start, _)| *start);
@@ -569,6 +601,11 @@ mod tests {
                 ("tomorrow".into(), "up".into())
             ]
         );
+        // Lengths travel in minutes: planned for every meeting, real for one that was held.
+        assert_eq!(agenda["day"][0]["dur"], 30);
+        assert_eq!(agenda["day"][0]["real"], 30);
+        assert_eq!(agenda["day"][1]["dur"], 30);
+        assert!(agenda["day"][1]["real"].is_null());
         // A meeting on another day says which day, in words and as a number.
         let last = &agenda["day"][3];
         assert_eq!(last["today"], false);

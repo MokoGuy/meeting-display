@@ -26,6 +26,7 @@ const KEEPALIVE_MS = 30000; // an unchanged screen is re-sent this often
 const TIMEOUT_S = 60; // elements vanish by themselves if the app dies
 const BROWSE_IDLE_MS = 10000; // the wheel view closes after this long without input
 const FLASH_MS = 1500;
+const SIDE_MS = 3000; // a meeting at rest alternates between when it is and how long it lasts
 const SPIN_MS = 450; // two notches closer than this are one gesture: no curtain between them
 
 const WHITE = "#FFFFFFFF";
@@ -48,6 +49,9 @@ interface Item {
   d?: number; // day of the month, for the calendar icon
   s?: number; // start, epoch seconds
   today?: boolean;
+  // Sent by Meeting Display 0.5.9 and later:
+  dur?: number; // planned length, minutes
+  real?: number | null; // real length, minutes, for a meeting that was held
 }
 interface Cur {
   id: string;
@@ -78,6 +82,7 @@ let flashUntil = 0;
 let wheelFx = ""; // the curtain to play with the next list change
 let curtains = 0;
 let lastWheel = 0;
+let shownSince = Date.now(); // when the meeting on screen last changed: its "when" side shows first
 let lastSignature = "";
 let lastDrawAt = 0;
 let lastIds: string[] = [];
@@ -156,6 +161,21 @@ function remaining(seconds: number): string {
   return `${minutes} min`;
 }
 
+/** "1h00", "30 min": a length. */
+function span(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const rest = minutes % 60;
+  return `${Math.floor(minutes / 60)}h${rest < 10 ? "0" : ""}${rest}`;
+}
+/** Short enough to sit next to another one: bare minutes under 100, "1h40" above. */
+function shortSpan(minutes: number): string {
+  return minutes < 100 ? String(minutes) : span(minutes);
+}
+/** Whether the "how long" side is up: the two sides swap every few seconds. */
+function lengthSide(): boolean {
+  return Math.floor((Date.now() - shownSince) / SIDE_MS) % 2 === 1;
+}
+
 // ---------- the six meeting screens (same template as the Windows app draws)
 function meetingScreen(cur: Cur): { elements: El[]; led?: string } {
   const toStart = cur.s - nowS();
@@ -187,8 +207,13 @@ function meetingScreen(cur: Cur): { elements: El[]; led?: string } {
   let label = "";
   let detail = "";
   if (kind === "idle") {
-    bl(cur.lbl, DIM);
-    if (cur.today) br(remaining(toStart), WHITE);
+    // At rest the bottom line swaps between when the meeting is and how long it lasts.
+    if (lengthSide()) {
+      bl(`duree ${span(Math.round((cur.e - cur.s) / 60))}`, DIM);
+    } else {
+      bl(cur.lbl, DIM);
+      if (cur.today) br(remaining(toStart), WHITE);
+    }
     label = "PROCHAIN";
     detail = `${cur.lbl} - dans ${remaining(toStart)}`;
   } else if (kind === "approach") {
@@ -238,7 +263,6 @@ function browseScreen(day: Item[], index: number, cur: Cur | null): { elements: 
     { id: "ico", type: "image", display: "front", path: "images/calendar.png", x: 1, y: 1, align: "top_left", timeout: TIMEOUT_S },
     text("badge", item.d ? String(item.d) : " ", "superscript", 8, 6, "#323232FF", { align: "top_mid" }),
     text("title", item.t, "small", 18, 0, set ? DIM : WHITE, { align: "top_left", width: 51, ...SCROLL }),
-    text("bl", when, "small", 18, 8, DIM, { align: "top_left" }),
   ];
   // Bottom right: what has become of it, or how far away it is.
   const running = !!cur && cur.id === item.id && (cur.phase === "live" || cur.phase === "overrun");
@@ -250,6 +274,20 @@ function browseScreen(day: Item[], index: number, cur: Cur | null): { elements: 
   else if (running) [state, right, color] = ["en cours", "LIVE", GREEN];
   else if (item.today && item.s) right = remaining(item.s - nowS());
   if (item.st === "tent") state = "provisoire";
+  // The bottom line swaps between when the meeting is and how long it lasts, except while
+  // it is running. A meeting that was held shows planned against real.
+  let left = when;
+  if (!running && item.dur !== undefined && lengthSide()) {
+    const real = item.st === "done" && typeof item.real === "number" ? item.real : null;
+    if (real === null) {
+      left = `duree ${span(item.dur)}`;
+      right = "";
+    } else {
+      left = item.dur < 100 && real < 100 ? `prevu ${item.dur}` : span(item.dur);
+      right = `reel ${shortSpan(real)}`;
+    }
+  }
+  elements.push(text("bl", left, "small", 18, 8, DIM, { align: "top_left" }));
   if (right) elements.push(text("br", right, "small", 70, 8, color, { align: "top_right" }));
   // Right edge: where this meeting sits among the others.
   const size = Math.max(2, Math.round(16 / day.length));
@@ -421,6 +459,7 @@ function onWheel(delta: number): void {
   browse = Math.min(count - 1, Math.max(0, from + delta));
   // The curtain travels the way the list moves: up towards later meetings. A wheel spun quickly
   // skips it: the card then changes at once, as fast as the bar can draw.
+  shownSince = Date.now();
   const spinning = Date.now() - lastWheel < SPIN_MS;
   lastWheel = Date.now();
   wheelFx = spinning ? "" : delta > 0 ? "reveal_up" : "reveal_down";
