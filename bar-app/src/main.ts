@@ -176,6 +176,18 @@ function lengthSide(): boolean {
   return Math.floor((Date.now() - shownSince) / SIDE_MS) % 2 === 1;
 }
 
+/**
+ * The time left, for the front screen next to a clock time. "9h27" alone reads as a time of
+ * day, so hours say "dans": "25 min", "dans 9h27", and "dans 12h" from ten hours on, rounded,
+ * because a longer text would run into the time on its left.
+ */
+function until(seconds: number): string {
+  const minutes = Math.floor((Math.max(0, seconds) + 59) / 60);
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 600) return `dans ${remaining(seconds)}`;
+  return `dans ${Math.round(minutes / 60)}h`;
+}
+
 // ---------- the six meeting screens (same template as the Windows app draws)
 function meetingScreen(cur: Cur): { elements: El[]; led?: string } {
   const toStart = cur.s - nowS();
@@ -212,7 +224,7 @@ function meetingScreen(cur: Cur): { elements: El[]; led?: string } {
       bl(`duree ${span(Math.round((cur.e - cur.s) / 60))}`, DIM);
     } else {
       bl(cur.lbl, DIM);
-      if (cur.today) br(remaining(toStart), WHITE);
+      if (cur.today) br(until(toStart), WHITE);
     }
     label = "PROCHAIN";
     detail = `${cur.lbl} - dans ${remaining(toStart)}`;
@@ -272,7 +284,7 @@ function browseScreen(day: Item[], index: number, cur: Cur | null): { elements: 
   if (item.st === "done") [state, right, color] = ["realisee", "faite", GREEN];
   else if (item.st === "skip") [state, right, color] = ["ignoree", "ignoree", GREY];
   else if (running) [state, right, color] = ["en cours", "LIVE", GREEN];
-  else if (item.today && item.s) right = remaining(item.s - nowS());
+  else if (item.today && item.s) right = until(item.s - nowS());
   if (item.st === "tent") state = "provisoire";
   // The bottom line swaps between when the meeting is and how long it lasts, except while
   // it is running. A meeting that was held shows planned against real.

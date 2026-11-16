@@ -18,7 +18,8 @@ Sans l'app embarquée, tout fonctionne comme avant, sans molette.
 | 10 secondes sans geste | retour à la réunion du moment |
 
 Sur chaque réunion, l'icône donne le jour du mois et la ligne du bas l'heure (avec le jour de la
-semaine si ce n'est pas aujourd'hui). À droite : le temps restant pour une réunion d'aujourd'hui,
+semaine si ce n'est pas aujourd'hui). À droite : le temps restant pour une réunion d'aujourd'hui
+(« 25 min », « dans 9h27 », « dans 12h » : le mot « dans » évite de lire une heure),
 « faite » en vert, « ignoree » en gris. Le trait orange sur le bord droit situe la réunion parmi
 les autres. Une réunion ignorée ou réalisée par erreur se reprend ainsi : molette jusqu'à elle,
 puis Start.

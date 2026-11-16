@@ -118,6 +118,20 @@ pub fn entry_sound(kind: ScreenKind) -> Option<Sound> {
 }
 
 /// "2h05", "12 min", "45 min" — time left before a start, rounded up to the minute.
+/// The time left, for the front screen next to a clock time. "9h27" alone reads as a time of
+/// day, so hours say "dans": "25 min", "dans 9h27", and "dans 12h" from ten hours on, rounded,
+/// because a longer text would run into the time on its left.
+pub fn until_label(seconds: i64) -> String {
+    let minutes = (seconds.max(0) + 59) / 60;
+    if minutes < 60 {
+        format!("{minutes} min")
+    } else if minutes < 600 {
+        format!("dans {}", remaining_label(seconds))
+    } else {
+        format!("dans {}h", (minutes + 30) / 60)
+    }
+}
+
 pub fn remaining_label(seconds: i64) -> String {
     let minutes = (seconds.max(0) + 59) / 60;
     if minutes >= 60 {
@@ -283,7 +297,7 @@ pub fn build(kind: ScreenKind, meeting: &Meeting, now: DateTime<Utc>, badge: u32
             elements.push(bottom_left(start_label.clone(), DIM));
             // Not today: the weekday already fills the line.
             if start.date_naive() == today {
-                elements.push(bottom_right(&remaining_label(to_start), WHITE));
+                elements.push(bottom_right(&until_label(to_start), WHITE));
             }
             (
                 "PROCHAIN",
@@ -420,6 +434,15 @@ mod tests {
         assert_eq!(at(6), ScreenKind::Approach);
         assert_eq!(at(5), ScreenKind::Imminent);
         assert_eq!(at(0), ScreenKind::Imminent);
+    }
+
+    #[test]
+    fn until_label_says_dans_for_hours() {
+        assert_eq!(until_label(25 * 60), "25 min");
+        assert_eq!(until_label(9 * 3600 + 27 * 60), "dans 9h27");
+        assert_eq!(until_label(10 * 3600 - 60), "dans 9h59");
+        assert_eq!(until_label(12 * 3600 + 5 * 60), "dans 12h");
+        assert_eq!(until_label(12 * 3600 + 40 * 60), "dans 13h");
     }
 
     #[test]
