@@ -1,4 +1,4 @@
-# État du projet — Meeting Display 0.5.9 (15 novembre 2026)
+# État du projet — Meeting Display 0.5.10 (15 novembre 2026)
 
 Ce document ne retient comme acquis que ce qui a été vérifié, avec la preuve. Les anciennes
 mentions « validé » de septembre 2026 venaient d'agents, pas de l'utilisateur, et ne sont pas reprises.
@@ -45,7 +45,7 @@ option de démarrage automatique des réunions, mise à jour automatique. Le gui
 | App embarquée : transitions animées | app installée sur la barre, agenda fictif, touches simulées, captures d'écran en rafale | molette : la nouvelle carte arrive sous un rideau noir qui se lève, jamais visible avant lui (16 crans mesurés) ; action : la flèche orange amène le mot puis découvre l'écran suivant, sans trou d'affichage. La fluidité elle-même (60 images par seconde) n'est pas mesurable par capture : jugée à l'œil sur la barre |
 | Mise à jour à la demande | versions antérieures installées sur le poste, clics faits par l'utilisateur dans le panneau | détection sans installation (0.5.5 puis 0.5.6) ; bandeau « Version x disponible » ; clic : l'app Windows se met à jour et redémarre (deux fois) ; bandeau « App de la barre à mettre à jour » puis clic : barre passée de 0.5.5 à 0.5.6 |
 | Mise à jour en un clic, app Windows puis barre | 0.5.6 vers 0.5.7 | **échec** : la barre a bien reçu l'app 0.5.7, mais elle a été lancée deux fois au même instant et le moteur JavaScript de la barre a planté (« JS fatal error », redémarrage de la barre nécessaire). Corrigé en 0.5.8, **correctif non vérifié** |
-| Lancement de l'app embarquée | démarrage de l'app Windows | l'app embarquée est lancée et reçoit l'agenda |
+| Lancement de l'app embarquée | démarrages répétés de l'app Windows le 16 novembre | **instable jusqu'en 0.5.9** : l'app Windows relançait l'app embarquée à chaque démarrage, même quand elle tournait déjà. Trois incidents ce jour-là (deux « JS fatal error », un écran de chargement figé avec l'interface réseau de la barre muette), chacun réglé par un redémarrage de la barre. Cause non prouvée : le journal de la barre n'a pas pu être lu. Depuis la 0.5.10, l'app n'est lancée qu'une fois par connexion de la barre, et seulement après 50 secondes sans battement. **Non vérifié sur la barre** |
 | Calendrier de test | `node tools/test-calendar.mjs --scenario day` relu par le code de l'app | 6 réunions gardées, 3 écartées comme prévu |
 
 ## Vérifié seulement en aperçu navigateur (données fictives)

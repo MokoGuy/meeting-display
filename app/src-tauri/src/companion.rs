@@ -34,6 +34,9 @@ const PACKAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 /// A refused install is tried again this many times, this far apart.
 const INSTALL_RETRIES: usize = 3;
 const INSTALL_RETRY_EVERY: Duration = Duration::from_secs(4);
+/// The heartbeat moves every 20 seconds: after this long without seeing it move, the on-bar
+/// app is not running.
+const LAUNCH_AFTER: Duration = Duration::from_secs(50);
 const ALIVE: &str = "/ext/apps_data/js_apps/meeting-display/alive.txt";
 
 /// The companion rewrites its heartbeat every 20 s: silent for longer than
@@ -57,6 +60,17 @@ pub struct Link {
     pub last_kind: Option<crate::screens::ScreenKind>,
     /// The bar's copy of the on-bar app has been compared with ours since the bar last answered.
     bar_app_checked: bool,
+    /// Since when the bar has been answering without a break.
+    reachable_since: Option<Instant>,
+    /// The on-bar app has been launched, by us or by an install, since the bar last answered.
+    launch_tried: bool,
+}
+
+/// Whether to start the on-bar app now. Only once each time the bar comes within reach, and
+/// only after watching long enough to be sure the app is not already running: launching an
+/// app that runs, or launching it twice, can freeze the bar or crash its JavaScript engine.
+pub fn should_launch(alive: bool, tried: bool, reachable_for: Option<Duration>) -> bool {
+    !alive && !tried && reachable_for.is_some_and(|time| time >= LAUNCH_AFTER)
 }
 
 impl Link {
@@ -117,6 +131,15 @@ pub async fn bar_app_version(client: &BusyBarClient) -> Result<Option<String>, (
     }))
 }
 
+/// Records that the on-bar app has just been started, so that it is not started a second time.
+pub fn note_launched(state: &AppState) {
+    state
+        .companion
+        .lock()
+        .expect("companion state poisoned")
+        .launch_tried = true;
+}
+
 /// Whether the bar's on-bar app is missing or older than the one this app carries.
 pub fn bar_app_behind(on_bar: Option<&str>) -> bool {
     needs_install(on_bar, PACKAGE_VERSION)
@@ -166,6 +189,12 @@ async fn ensure_bar_app(state: &AppState, client: &BusyBarClient) {
     let allowed = state.bar_install_allowed.swap(false, order);
     if allowed && bar_app_behind(on_bar.as_deref()) {
         let _ = install_bar_app(client).await;
+        // The install starts the app itself.
+        state
+            .companion
+            .lock()
+            .expect("companion state poisoned")
+            .launch_tried = true;
     }
     state.bar_installing.store(false, order);
 }
@@ -430,20 +459,31 @@ pub async fn sync(app: &tauri::AppHandle) -> bool {
     let alive = match client.storage_read(ALIVE).await {
         Ok(alive) => alive,
         Err(_) => {
-            state
-                .companion
-                .lock()
-                .expect("companion state poisoned")
-                .bar_app_checked = false;
-            None
+            let mut link = state.companion.lock().expect("companion state poisoned");
+            link.bar_app_checked = false;
+            link.reachable_since = None;
+            link.launch_tried = false;
+            return false;
         }
     };
     let installed = alive.is_some();
-    let active = state
-        .companion
-        .lock()
-        .expect("companion state poisoned")
-        .note_alive(alive, Instant::now());
+    let (active, launch) = {
+        let now = Instant::now();
+        let mut link = state.companion.lock().expect("companion state poisoned");
+        let since = *link.reachable_since.get_or_insert(now);
+        let active = link.note_alive(alive, now);
+        let launch = should_launch(active, link.launch_tried, Some(now.duration_since(since)));
+        if launch {
+            link.launch_tried = true;
+        }
+        (active, launch)
+    };
+    let order = std::sync::atomic::Ordering::SeqCst;
+    if launch && !state.bar_install_allowed.load(order) && !state.bar_installing.load(order) {
+        // Fails quietly when the on-bar app is not installed: the panel offers to install it.
+        let launched = client.launch_app(APP_ID).await.is_ok();
+        tracing::info!(companion = "launch", launched);
+    }
     if !installed {
         return false;
     }
@@ -514,22 +554,6 @@ pub async fn sync(app: &tauri::AppHandle) -> bool {
             .last_agenda = agenda;
     }
     active
-}
-
-/// Starts the companion on the bar if it is installed. Called once at startup.
-pub async fn launch(app: tauri::AppHandle) {
-    tokio::time::sleep(Duration::from_secs(3)).await;
-    let state = app.state::<AppState>();
-    // An update is about to replace the on-bar app: starting the old one now would only get
-    // in the way of the install, which launches the new one itself.
-    let order = std::sync::atomic::Ordering::SeqCst;
-    if state.bar_install_allowed.load(order) || state.bar_installing.load(order) {
-        return;
-    }
-    if let Ok(client) = BusyBarClient::new(&state.base_url()) {
-        let launched = client.launch_app(APP_ID).await.is_ok();
-        tracing::info!(companion = "launch", launched);
-    }
 }
 
 #[cfg(test)]
@@ -634,6 +658,17 @@ mod tests {
             build_agenda(&MeetingState::Idle, &[], &[], now)["seq"],
             empty["seq"]
         );
+    }
+
+    #[test]
+    fn launches_once_and_only_when_the_app_is_not_running() {
+        let long = Some(Duration::from_secs(60));
+        assert!(should_launch(false, false, long));
+        // Already running, already tried, or not watched long enough: hands off.
+        assert!(!should_launch(true, false, long));
+        assert!(!should_launch(false, true, long));
+        assert!(!should_launch(false, false, Some(Duration::from_secs(20))));
+        assert!(!should_launch(false, false, None));
     }
 
     #[test]

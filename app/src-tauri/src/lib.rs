@@ -84,8 +84,6 @@ pub fn run() {
             tauri::async_runtime::spawn(scheduler::run(handle));
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(updater::run(handle));
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(companion::launch(handle));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

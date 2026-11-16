@@ -425,7 +425,10 @@ pub async fn apply_update(app: AppHandle) -> Result<(), String> {
         return crate::updater::install(&app).await;
     }
     let client = BusyBarClient::new(&state.base_url()).map_err(|error| error.to_string())?;
-    crate::companion::install_bar_app(&client).await
+    crate::companion::install_bar_app(&client).await?;
+    // The install started the app: nothing else may launch it again.
+    crate::companion::note_launched(&state);
+    Ok(())
 }
 
 /// The local history: meetings held or skipped over the last 30 days.
