@@ -411,6 +411,13 @@ pub async fn get_versions(app: AppHandle) -> Result<VersionsDto, String> {
     })
 }
 
+/// Looks for a newer release right now instead of waiting for the next scheduled check.
+#[tauri::command]
+pub async fn check_update(app: AppHandle) -> Result<VersionsDto, String> {
+    crate::updater::check(&app).await;
+    get_versions(app).await
+}
+
 /// The user's "update" click: this app first when a newer release is on offer (it restarts,
 /// and the new version then updates the bar), otherwise the bar's app alone.
 #[tauri::command]

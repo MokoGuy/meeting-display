@@ -6,8 +6,14 @@ import "./tokens.css";
 import "./components.css";
 
 // ---------- icons
-type IconName = "settings" | "back" | "chevron" | "eye" | "resume" | "skip" | "prev" | "next" | "auto" | "light" | "dark";
+type IconName = "refresh" | "settings" | "back" | "chevron" | "eye" | "resume" | "skip" | "prev" | "next" | "auto" | "light" | "dark";
 const ICON_PATHS: Record<IconName, ReactNode> = {
+  refresh: (
+    <>
+      <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
+      <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
@@ -270,18 +276,35 @@ export function UpdateBanner({ text, busy, onUpdate }: { text: string; busy?: bo
 }
 
 /** The installed versions, two quiet lines closing the settings. */
-export function VersionInfo({ app, update, barApp }: { app: string; update?: string | null; barApp?: string | null }) {
+export function VersionInfo({
+  app,
+  update,
+  barApp,
+  checking,
+  onCheck,
+}: {
+  app: string;
+  update?: string | null;
+  barApp?: string | null;
+  /** A check is under way: the state says so and the button steps aside. */
+  checking?: boolean;
+  onCheck: () => void;
+}) {
+  const state = checking ? "vérification…" : update;
   return (
-    <p className="md-version">
-      Meeting Display {app}
-      {update ? ` · ${update}` : ""}
-      {barApp !== undefined && (
-        <>
-          <br />
-          App de la barre {barApp ?? "non installée"}
-        </>
-      )}
-    </p>
+    <div className="md-version-row">
+      <p className="md-version">
+        Meeting Display {app}
+        {state ? ` · ${state}` : ""}
+        {barApp !== undefined && (
+          <>
+            <br />
+            App de la barre {barApp ?? "non installée"}
+          </>
+        )}
+      </p>
+      {!checking && <IconButton icon="refresh" label="Vérifier les mises à jour" onClick={onCheck} />}
+    </div>
   );
 }
 

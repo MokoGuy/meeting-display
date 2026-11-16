@@ -5,13 +5,15 @@ use tauri_plugin_positioner::{Position, WindowExt};
 
 const QUIT_ID: &str = "quit";
 const START_ID: &str = "start";
+const CHECK_ID: &str = "check";
 
 pub fn build(app: &mut App, tooltip: &str) -> tauri::Result<()> {
     // The tray context menu is intentionally minimal: everything else (Start,
     // settings, opening the bar UI) lives in the popover opened by a left click.
     let quit = MenuItem::with_id(app, QUIT_ID, "Quitter", true, None::<&str>)?;
     let start = MenuItem::with_id(app, START_ID, "Démarrer la réunion", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&start, &quit])?;
+    let check = MenuItem::with_id(app, CHECK_ID, "Vérifier les mises à jour", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&start, &check, &quit])?;
 
     let icon = normal_icon()?;
     TrayIconBuilder::with_id("main")
@@ -22,6 +24,19 @@ pub fn build(app: &mut App, tooltip: &str) -> tauri::Result<()> {
         .on_menu_event(|app, event| {
             if event.id().as_ref() == QUIT_ID {
                 app.exit(0);
+            } else if event.id().as_ref() == CHECK_ID {
+                let handle = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    crate::updater::check(&handle).await;
+                    // The answer is in the panel: bring it up, it reads it when it gets focus.
+                    let shown = handle
+                        .get_webview_window("main")
+                        .and_then(|window| window.is_visible().ok())
+                        .unwrap_or(false);
+                    if !shown {
+                        toggle(&handle);
+                    }
+                });
             } else if event.id().as_ref() == START_ID {
                 let handle = app.clone();
                 tauri::async_runtime::spawn(async move {

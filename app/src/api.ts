@@ -106,6 +106,8 @@ export interface VersionsDto {
   bar_behind: boolean;
 }
 export const getVersions = () => invoke<VersionsDto>("get_versions");
+/** Looks for a newer release right now, then reports like `getVersions`. */
+export const checkUpdate = () => invoke<VersionsDto>("check_update");
 /** Installs what is on offer: this app first (it restarts), otherwise the bar's app alone. */
 export const applyUpdate = () => invoke<void>("apply_update");
 

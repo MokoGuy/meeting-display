@@ -83,6 +83,11 @@ de l'app Windows (avec « à jour » ou la version disponible, une fois la premi
 faite), puis celle de l'app embarquée sur la barre. Sur la barre, l'écran arrière affiche la version
 de l'app embarquée en haut à droite quand aucune réunion n'approche.
 
+**Vérifier tout de suite s'il y a une mise à jour** : l'icône aux deux flèches à droite de la ligne
+de version, ou clic droit sur l'icône de la barre des tâches puis **Vérifier les mises à jour**
+(le panneau s'ouvre avec la réponse). Cela ne fait que vérifier ; rien ne s'installe sans le
+bouton **Mettre à jour**.
+
 Les sons sont joués à un volume de 50 quand la barre est réglée plus bas, puis le volume
 d'origine est rétabli.
 

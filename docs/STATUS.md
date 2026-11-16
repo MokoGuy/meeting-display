@@ -1,4 +1,4 @@
-# État du projet — Meeting Display 0.5.10 (15 novembre 2026)
+# État du projet — Meeting Display 0.5.11 (15 novembre 2026)
 
 Ce document ne retient comme acquis que ce qui a été vérifié, avec la preuve. Les anciennes
 mentions « validé » de septembre 2026 venaient d'agents, pas de l'utilisateur, et ne sont pas reprises.

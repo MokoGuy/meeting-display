@@ -7,6 +7,7 @@ import {
   MeetingStatusDto,
   VersionsDto,
   applyUpdate,
+  checkUpdate,
   endMeeting,
   getAutoStart,
   getConnection,
@@ -134,6 +135,7 @@ function App() {
   const [autoStart, setAutoStartState] = useState(false);
   const [versions, setVersions] = useState<VersionsDto | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [theme, setTheme] = useState<Theme>(() => {
     try {
       const saved = window.localStorage.getItem("theme");
@@ -480,6 +482,13 @@ function App() {
                 app={versions.app}
                 update={versions.update}
                 barApp={versions.bar_reachable ? versions.bar_app : undefined}
+                checking={checking}
+                onCheck={() => {
+                  setChecking(true);
+                  void checkUpdate()
+                    .then(setVersions, () => undefined)
+                    .finally(() => setChecking(false));
+                }}
               />
             )}
             <Button primary onClick={() => void save()}>

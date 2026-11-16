@@ -60,6 +60,10 @@ export function installMocks() {
         return new URLSearchParams(window.location.search).has("update")
           ? { app: "0.5.5", update: "0.5.6 disponible", available: "0.5.6", bar_app: "0.5.5", bar_reachable: true, bar_behind: false }
           : { app: "0.5.5", update: "à jour", available: null, bar_app: "0.5.5", bar_reachable: true, bar_behind: false };
+      case "check_update":
+        return new Promise((resolve) =>
+          setTimeout(() => resolve({ app: "0.5.7", update: "0.5.10 disponible", available: "0.5.10", bar_app: "0.5.9", bar_reachable: true, bar_behind: false }), 1500),
+        );
       case "apply_update":
         return new Promise(() => {});
       case "get_history": {
