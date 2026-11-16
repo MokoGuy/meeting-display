@@ -110,6 +110,7 @@
 .md-disclosure-trigger .md-icon { width: 14px; height: 14px; transition: transform 0.15s ease-out; }
 .md-disclosure-trigger[aria-expanded="true"] .md-icon { transform: rotate(90deg); }
 .md-disclosure-body { padding-top: var(--space-2); display: flex; flex-direction: column; gap: var(--space-3); }
+.md-disclosure-body[hidden] { display: none; }
 
 /* Point d'état */
 .md-status { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 12px; line-height: 16px; color: var(--ink-muted); }
